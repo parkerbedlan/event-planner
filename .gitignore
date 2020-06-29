@@ -1,0 +1,8 @@
+# connects to database and returns $db mysqli object
+connectToDb.php
+
+# holds debugger configuration
+/.vscode
+
+# debugging tool for submitting sql queries directly
+queryCli.php
