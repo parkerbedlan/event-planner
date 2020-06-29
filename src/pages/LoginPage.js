@@ -1,5 +1,5 @@
 import React, { useContext } from 'react'
-import { Auth0Context } from './contexts/auth0-context'
+import { Auth0Context } from '../contexts/auth0-context'
 import Button from 'react-bootstrap/Button'
 import styled from 'styled-components'
 

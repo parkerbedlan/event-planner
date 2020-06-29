@@ -4,9 +4,10 @@ import styled from 'styled-components'
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
 
 import { Layout } from './components/Layout'
-import { LoginPage } from './LoginPage'
-import { VerificationPage } from './VerificationPage'
-import { SessionsPage } from './SessionsPage'
+import { LoginPage } from './pages/LoginPage'
+import { VerificationPage } from './pages/VerificationPage'
+import { HomePage } from './pages/HomePage'
+// import { SessionsPage } from './pages/SessionsPage'
 
 const LoadingScreen = styled.div`
   width: 100%;
@@ -18,17 +19,20 @@ function App() {
   const { isLoading, user } = useContext(Auth0Context)
   return (
     <>
-      {isLoading && <LoadingScreen />}
       <Layout>
+        {isLoading && <LoadingScreen />}
         {!isLoading && !user && <LoginPage />}
         {!isLoading && user && !user.email_verified && <VerificationPage />}
         {!isLoading && user && user.email_verified && (
-          <Router>
-            <Switch>
-              <Route exact path="/" component={SessionsPage} />
-            </Switch>
-          </Router>
+          <>
+            <Router>
+              <Switch>
+                <Route exact path="/" component={HomePage} />
+              </Switch>
+            </Router>
+          </>
         )}
+        <img id="image" alt="profile pic" />
       </Layout>
     </>
   )

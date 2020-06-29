@@ -1,5 +1,6 @@
 import React, { Component, createContext } from 'react'
 import createAuth0Client from '@auth0/auth0-spa-js'
+import { signIn } from '../phpHelper'
 
 export const Auth0Context = createContext()
 
@@ -44,6 +45,8 @@ export class Auth0Provider extends Component {
     this.setState({ isLoading: true })
     await this.state.auth0Client.handleRedirectCallback()
     const user = await this.state.auth0Client.getUser()
+    console.log('Signing in.')
+    await signIn(user)
     this.setState({ user, isAuthenticated: true, isLoading: false })
     window.history.replaceState({}, document.title, window.location.pathname)
   }
