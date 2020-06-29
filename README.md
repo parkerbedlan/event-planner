@@ -1,4 +1,4 @@
-## This is the backend for [event-planner-frontend](https://github.com/parkerbedlan/event-planner-frontend).
+## This is the frontend for [event-planner-backend](https://github.com/parkerbedlan/event-planner-backend).
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
