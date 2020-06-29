@@ -1,3 +1,5 @@
+## This is the frontend for [event-planner-backend](https://github.com/parkerbedlan/event-planner-backend).
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
