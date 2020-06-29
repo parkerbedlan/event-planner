@@ -1,47 +1,91 @@
 <?php
 
+header("Access-Control-Allow-Origin: http://localhost:3000");
+
 include 'connectToDb.php';
 
-// code here
+$response;
+
+switch($_POST['method']) {
+  case 'signIn':
+    $user = json_decode($_POST['user']);
+    if (strlen($user->email) === 0) {
+      $response = json_encode("failed");
+      break;
+    }
+    $picture = file_get_contents($user->picture);
+    signIn($user->email, $user->given_name, $user->family_name);
+    $response = $picture;
+  break;
+  case 'getAuthUserProfilePic':
+    $user = json_decode($_POST['user']);
+    $picture = file_get_contents($user->picture);
+    $response = $picture;
+  break;
+  case 'jsonTest':
+    $response = json_encode("success");
+  break;
+  default:
+    $response = json_encode("invalid method");
+}
+
+echo $response;
 
 $db->close();
 
-
-function activateUser($emailAddr, $firstName, $lastName, $profilePicture = null) {
+function signIn($emailAddr, $firstName, $lastName, $profilePicture = null) {
   $db = $GLOBALS['db'];
 
-  $userInTable = $db->query(sprintf(
-    "SELECT 1 FROM Users
-    WHERE emailAddr='%s'", $emailAddr
-  ));
+  $userInTable = userInTable($emailAddr);
+  $userInTableObj = $userInTable->fetch_object();
 
   if (!$userInTable->num_rows) {
-    $result = $db->query(sprintf(
-      "INSERT INTO Users (emailAddr, firstName, lastName, isActivated)
-      VALUES ('%s', '%s', '%s', true);", $emailAddr, $firstName, $lastName
-    ));
+    addUser($emailAddr, $firstName, $lastName);
+  }
+  else if (!(bool)$userInTableObj->isActivated) {
+    updateUser($emailAddr, $firstName, $lastName);
   }
   else {
-    $result = $db->query(sprintf(
-      "UPDATE Users
-      SET firstName = '%s', lastName = '%s', isActivated = true
-      WHERE emailAddr='%s'", $firstName, $lastName, $emailAddr
-    ));
-  }
-  if (!$result) return 'activating user failed: ' . $db->error;
-
-  if ($profilePicture) {
-    addProfilePicture($emailAddr, $profilePicture);
+    // printf("user %s already in table\n", $emailAddr);
+    return;
   }
 
-  return 'success';
+  // if ($profilePicture) {
+  //   addProfilePicture($emailAddr, $profilePicture);
+  // }
 }
 
+function userInTable($emailAddr) {
+  $userInTable = $GLOBALS['db']->query(sprintf(
+    "SELECT * FROM Users
+    WHERE emailAddr='%s'", $emailAddr
+  ));
+  return $userInTable;
+}
+
+function addUser($emailAddr, $firstName, $lastName) {
+  // printf("adding user %s\n", $emailAddr);
+  $GLOBALS['db']->query(sprintf(
+    "INSERT INTO Users (emailAddr, firstName, lastName, isActivated)
+    VALUES ('%s', '%s', '%s', true);", $emailAddr, $firstName, $lastName
+  ));
+}
+
+function updateUser($emailAddr, $firstName, $lastName) {
+  // printf("updating user %s\n", $emailAddr);
+  $GLOBALS['db']->query(sprintf(
+    "UPDATE Users
+    SET firstName = '%s', lastName = '%s', isActivated = true
+    WHERE emailAddr='%s'", $firstName, $lastName, $emailAddr
+  ));
+}
+
+// todo: implement this
 function addProfilePicture($emailAddr, $profilePicture) {
   throw new Exception('not implemented');
 }
 
-// todo: add $admins to database too
+// idea: add $admins to database too
 function createNewEvent($eventName, $ownerEmail, $adminsEmails = null) {
   $db = $GLOBALS['db'];
   // add event
