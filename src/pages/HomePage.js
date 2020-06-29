@@ -2,7 +2,7 @@ import React, { useContext } from 'react'
 import { Auth0Context } from '../contexts/auth0-context'
 import Button from 'react-bootstrap/Button'
 import styled from 'styled-components'
-// import { blobRender, getAuthUserProfPic } from '../phpHelper'
+// import { signIn } from '../phpHelper'
 
 const Styles = styled.div`
   * {
@@ -10,10 +10,10 @@ const Styles = styled.div`
   }
 `
 
-// special Toasts message if no events
+// todo: special Toasts message if no events
 export function HomePage() {
   // const { user } = useContext(Auth0Context)
-  // getAuthUserProfPic(user).then(res => blobRender(res, '#image'))
+  // signIn(user).then(res => console.log(res))
 
   const { logout } = useContext(Auth0Context)
   return (

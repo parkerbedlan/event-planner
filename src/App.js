@@ -32,7 +32,7 @@ function App() {
             </Router>
           </>
         )}
-        <img id="image" alt="profile pic" />
+        {/* <img id="image1" alt="profile pic" /> */}
       </Layout>
     </>
   )
