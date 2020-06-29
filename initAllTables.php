@@ -37,7 +37,6 @@ if (!tableExists("Users")) {
       emailAddr varchar(255) NOT NULL,
       firstName varchar(31),
       lastName varchar(31),
-      profilePicture blob,
       isActivated bit NOT NULL,
       PRIMARY KEY (emailAddr)
     );"
