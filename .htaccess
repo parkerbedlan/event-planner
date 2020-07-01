@@ -1,0 +1,16 @@
+#<files .htaccess>
+#    deny from all
+#</files>
+#
+#<files connectToDb.php>
+#    deny from all
+#</files>
+#
+#<files verify.php>
+#    deny from all
+#</files>
+
+Deny From All
+<FilesMatch "^requestHandler\.php$">
+Allow From All
+</FilesMatch>

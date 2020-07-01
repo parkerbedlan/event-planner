@@ -1,0 +1,14 @@
+# connects to database and returns $db mysqli object
+connectToDb.php
+
+# checks whether $_POST['password'] is correct and ouputs $verified boolean
+verify.php
+
+# where profile pictures are stored as $emailAddr.png
+/profilePictures
+
+# holds debugger configuration
+/.vscode
+
+# debugging tool for submitting sql queries directly
+queryCli.php
