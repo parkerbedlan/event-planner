@@ -23,7 +23,7 @@ async function getPHP(methodName, options = {}, format = 'json') {
   for (const key in options) {
     formData.append(key, JSON.stringify(options[key]))
   }
-  await fetch('http://localhost/event_planner_php/requestHandler.php', {
+  await fetch('http://localhost/event-planner/backend/requestHandler.php', {
     method: 'POST',
     headers: {},
     body: formData,
