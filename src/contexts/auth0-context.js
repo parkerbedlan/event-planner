@@ -1,13 +1,13 @@
 import React, { Component, createContext } from 'react'
 import createAuth0Client from '@auth0/auth0-spa-js'
-import { signIn } from '../phpHelper'
+import { init } from '../App'
 
 export const Auth0Context = createContext()
 
 export class Auth0Provider extends Component {
   state = {
     auth0Client: null,
-    isLoading: true,
+    isAuthLoading: true,
     isAuthenticated: false,
     user: null,
   }
@@ -23,7 +23,7 @@ export class Auth0Provider extends Component {
     try {
       this.initializeAuth0()
     } catch {
-      this.setState({ isLoading: false })
+      this.setState({ isAuthLoading: false })
     }
   }
 
@@ -38,26 +38,29 @@ export class Auth0Provider extends Component {
     const isAuthenticated = await auth0Client.isAuthenticated()
     const user = isAuthenticated ? await auth0Client.getUser() : null
 
-    this.setState({ isLoading: false, isAuthenticated, user })
+    if (user) {
+      console.log('refresh')
+      init({ ...user, signIn: false })
+    }
+
+    this.setState({ isAuthLoading: false, isAuthenticated, user })
   }
 
   handleRedirectCallback = async () => {
-    this.setState({ isLoading: true })
+    this.setState({ isAuthLoading: true })
     await this.state.auth0Client.handleRedirectCallback()
     const user = await this.state.auth0Client.getUser()
-    console.log('Signing in.')
-    const signInResponse = await signIn(user)
-    console.log(signInResponse)
-    this.setState({ user, isAuthenticated: true, isLoading: false })
+    init({ ...user, signIn: true })
+    this.setState({ user, isAuthenticated: true, isAuthLoading: false })
     window.history.replaceState({}, document.title, window.location.pathname)
   }
 
   render() {
-    const { auth0Client, isLoading, isAuthenticated, user } = this.state
+    const { auth0Client, isAuthLoading, isAuthenticated, user } = this.state
     const { children } = this.props
 
     const configObject = {
-      isLoading,
+      isAuthLoading,
       isAuthenticated,
       user,
       loginWithRedirect: (...p) => auth0Client.loginWithRedirect(...p),

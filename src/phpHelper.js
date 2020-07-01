@@ -3,6 +3,7 @@ export async function jsonTest(data) {
 }
 
 export async function signIn(authUser) {
+  console.log('Signing in...')
   return await getPHP('signIn', { user: authUser })
 }
 
