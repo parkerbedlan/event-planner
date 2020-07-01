@@ -19,8 +19,10 @@ switch($_POST['method']) {
       $response = json_encode("failed");
       break;
     }
+    $given_name = isset($user->given_name) ? $user->given_name : $user->nickname;
+    $family_name = isset($user->family_name) ? $user->family_name : '';
     $picture = file_get_contents($user->picture);
-    signIn($user->email, $user->given_name, $user->family_name, $picture);
+    signIn($user->email, $given_name, $family_name, $picture);
     $response = json_encode('successfully signed in');
   break;
   case 'getAuthUserProfilePic':
