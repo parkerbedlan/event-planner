@@ -1,4 +1,4 @@
-import React, { useContext, useReducer } from 'react'
+import React, { useContext, useEffect, useReducer } from 'react'
 import { Auth0Context } from './contexts/auth0-context'
 import styled from 'styled-components'
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
@@ -9,6 +9,7 @@ import { VerificationPage } from './pages/VerificationPage'
 import { HomePage } from './pages/HomePage'
 
 import { signIn } from './phpHelper'
+// import useAsyncReducer from './asyncReducer'
 
 const LoadingScreen = styled.div`
   width: 100%;
@@ -16,27 +17,28 @@ const LoadingScreen = styled.div`
   background: url(${require('./images/loading.gif')}) center center no-repeat;
 `
 
-export async function init(authUser) {
+export function init(authUser) {
   console.log('signIn', authUser.signIn)
   if (authUser.signIn) {
-    const signInResponse = await signIn(authUser)
-    console.log(signInResponse)
+    signIn(authUser).then(res => console.log(res))
   }
 
   if (!authUser.email_verified) {
     console.log('init rejected')
-    return { email_verified: false }
+    return { email_verified: false, signIn: false, potato: 1 }
   }
   console.log('init accepted')
 
   // todo: handling caching should happen here
 
-  return { email_verified: true }
+  return { email_verified: true, signIn: false }
 }
 
 function reducer(state, action) {
-  if (!state.email_verified) return { ...state }
+  // if (!state.email_verified) return { ...state }
   switch (action.type) {
+    case 'init':
+      return init(action.authUser)
     case 'test':
       console.log('action working!')
       break
@@ -51,9 +53,14 @@ function App() {
   const { isAuthLoading, user } = useContext(Auth0Context)
   const [state, dispatch] = useReducer(
     reducer,
-    { email_verified: false, signIn: false },
+    { email_verified: false, signIn: false, potato: 0 },
     init
   )
+
+  useEffect(() => {
+    console.log(user)
+    console.log(state)
+  })
 
   return (
     <EventPlannerDispatch.Provider value={dispatch}>

@@ -3,6 +3,7 @@ import { Auth0Context } from '../contexts/auth0-context'
 import Button from 'react-bootstrap/Button'
 import styled from 'styled-components'
 // import { signIn } from '../phpHelper'
+// import EventPlannerDispatch from '../App'
 
 const Styles = styled.div`
   * {
