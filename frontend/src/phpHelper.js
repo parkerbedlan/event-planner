@@ -1,3 +1,59 @@
+export async function getEventSchedule(
+  eventId,
+  emailAddr,
+  scope = 'entireFuture'
+) {
+  throw Error('Not yet implemented')
+}
+
+export async function getGroupData(groupId) {
+  return await getPHP('getGroupData', { groupId: groupId })
+}
+
+export async function getGroupLeaderEmails(groupId) {
+  return await getPHP('getGroupLeaderEmails', { groupId: groupId })
+}
+
+export async function getGroupMemberEmails(groupId) {
+  return await getPHP('getGroupMemberEmails', { groupId: groupId })
+}
+
+export async function getGroupSessionIds(groupId) {
+  return await getPHP('getGroupSessionIds', { groupId: groupId })
+}
+
+export async function getSessionData(sessionId) {
+  return await getPHP('getSessionData', { sessionId: sessionId })
+}
+
+export async function getSessionGroupIds(sessionId) {
+  return await getPHP('getSessionGroupIds', { sessionId: sessionId })
+}
+
+export async function getEventGroupIds(eventId) {
+  return await getPHP('getEventGroupIds', { eventId: eventId })
+}
+
+export async function getEventSessionIds(eventId) {
+  return await getPHP('getEventSessionIds', { eventId: eventId })
+}
+
+export async function getAdmins(eventId) {
+  return await getPHP('getAdmins', { eventId: eventId })
+}
+
+export async function getParticipants(eventId) {
+  return await getPHP('getParticipants', { eventId: eventId })
+}
+
+export async function getEventData(eventId) {
+  return await getPHP('getEventData', { eventId: eventId })
+}
+
+export async function getUserData(emailAddr) {
+  return await getPHP('getUserData', { emailAddr: emailAddr })
+}
+
 export async function jsonTest(data) {
   return await getPHP('jsonTest', { data: data })
 }
@@ -15,7 +71,7 @@ export async function getProfilePic(emailAddr) {
   return await getPHP('getProfilePic', { emailAddr: emailAddr }, 'blob')
 }
 
-async function getPHP(methodName, options = {}, format = 'json') {
+export async function getPHP(methodName, options = {}, format = 'json') {
   let output
   let formData = new FormData()
   formData.append('password', process.env.REACT_APP_PHP_PASSWORD)

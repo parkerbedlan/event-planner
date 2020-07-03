@@ -10,114 +10,219 @@ if(!$verified) {
 
 include 'connectToDb.php';
 
-$response;
+include 'userFunctions.php';
 
-switch($_POST['method']) {
-  case 'signIn':
-    $user = json_decode($_POST['user']);
-    if (strlen($user->email) === 0) {
-      $response = json_encode("failed");
-      break;
-    }
-    $given_name = isset($user->given_name) ? $user->given_name : $user->nickname;
-    $family_name = isset($user->family_name) ? $user->family_name : '';
-    $picture = file_get_contents($user->picture);
-    signIn($user->email, $given_name, $family_name, $picture);
-    $response = json_encode('successfully signed in');
-  break;
-  case 'getAuthUserProfilePic':
-    $func = 'getAuthUserProfilePic';
-    $user = json_decode($_POST['user']);
-    $picture = file_get_contents($user->picture);
-    $response = $picture;
-  break;
-  case 'getProfilePic':
-    $func = 'getProfilePic';
-    $emailAddr = json_decode($_POST['emailAddr']);
-    $response = file_get_contents("profilePictures/$emailAddr.png");
-  break;
-  case 'jsonTest':
-    $response = json_encode(json_decode($_POST['data']));
-  break;
-  default:
-    $response = json_encode("invalid method");
-}
-
-echo $response;
+echo call_user_func($_POST['method']);
 
 $db->close();
 
-function signIn($emailAddr, $firstName, $lastName, $profilePicture = null) {
-  $db = $GLOBALS['db'];
+function jsonTest() {
+  return json_encode(json_decode($_POST['data']));
+}
 
-  $userInTable = userInTable($emailAddr);
-  $userInTableObj = $userInTable->fetch_object();
-
-  if (!$userInTable->num_rows) {
-    addUser($emailAddr, $firstName, $lastName);
+function signIn() {
+  $user = json_decode($_POST['user']);
+  if (strlen($user->email) === 0) {
+    return json_encode("failed");
   }
-  else if (!(bool)$userInTableObj->isActivated) {
-    updateUser($emailAddr, $firstName, $lastName);
+  $given_name = isset($user->given_name) ? $user->given_name : $user->nickname;
+  $family_name = isset($user->family_name) ? $user->family_name : '';
+  $picture = file_get_contents($user->picture);
+  signInUser($user->email, $given_name, $family_name, $picture);
+  return json_encode('successfully signed in');
+}
+
+function getAuthUserProfilePic() {
+  $func = 'getAuthUserProfilePic';
+  $user = json_decode($_POST['user']);
+  $picture = file_get_contents($user->picture);
+  return $picture;
+}
+
+function getProfilePic() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  return file_get_contents("profilePictures/$emailAddr.png");
+}
+
+function getEventData() {
+  $id = $_POST['eventId'];
+  $query = "SELECT title, shortTitle FROM events WHERE id=$id";
+  return json_encode($GLOBALS['db']->query($query)->fetch_object());
+}
+
+function getUserData() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $query = "SELECT emailAddr, firstName, lastName FROM Users WHERE emailAddr='$emailAddr'";
+  $result = $GLOBALS['db']->query($query);
+  return json_encode($result->fetch_object());
+}
+
+function getAdmins() {
+  $id = $_POST['eventId'];
+  $query = "SELECT Events_Users.emailAddr, Users.firstName, Users.lastName FROM Events_Users 
+  INNER JOIN Users
+  ON Events_users.emailAddr=Users.emailAddr
+  WHERE eventId=$id AND isAdmin=1";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $userObj = $result->fetch_object();
+    array_push($all_results, $userObj);
   }
-  else {
-    // printf("user %s already in table\n", $emailAddr);
-    return;
+  return json_encode($all_results);
+}
+
+function getParticipants() {
+  $id = $_POST['eventId'];
+  $query = "SELECT Events_Users.emailAddr, Users.firstName, Users.lastName FROM Events_Users 
+  INNER JOIN Users
+  ON Events_users.emailAddr=Users.emailAddr
+  WHERE eventId=$id AND isAdmin=0";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $userObj = $result->fetch_object();
+    array_push($all_results, $userObj);
   }
+  return json_encode($all_results);
+}
 
-  if ($profilePicture) {
-    addProfilePicture($emailAddr, $profilePicture);
+function getEventSessionIds() {
+  $eventId = $_POST['eventId'];
+  $query = "SELECT id FROM Sessions WHERE eventId=$eventId";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $sessionIdObj = (int)$result->fetch_object()->id;
+    array_push($all_results, $sessionIdObj);
   }
+  return json_encode($all_results);
 }
 
-function userInTable($emailAddr) {
-  $userInTable = $GLOBALS['db']->query(
-    "SELECT * FROM Users
-    WHERE emailAddr='$emailAddr'"
-  );
-  return $userInTable;
+function getEventGroupIds() {
+  $eventId = $_POST['eventId'];
+  $query = "SELECT id FROM Groups WHERE eventId=$eventId";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $sessionIdObj = (int)$result->fetch_object()->id;
+    array_push($all_results, $sessionIdObj);
+  }
+  return json_encode($all_results);
 }
 
-function addUser($emailAddr, $firstName, $lastName) {
-  // printf("adding user %s\n", $emailAddr);
-  $GLOBALS['db']->query(
-    "INSERT INTO Users (emailAddr, firstName, lastName, isActivated)
-    VALUES ('$emailAddr', '$firstName', '$lastName', true);"
-  );
+function getSessionData() {
+  $sessionId = $_POST['sessionId'];
+  $query = "SELECT id, eventId, title, description, startTime, endTime, link, location FROM Sessions WHERE id=$sessionId";
+  $output = json_encode($GLOBALS['db']->query($query)->fetch_object());
+  return $output;
 }
 
-function updateUser($emailAddr, $firstName, $lastName) {
-  // printf("updating user %s\n", $emailAddr);
-  $GLOBALS['db']->query(
-    "UPDATE Users
-    SET firstName = '$firstName', lastName = '$lastName', isActivated = true
-    WHERE emailAddr='$emailAddr'"
-  );
+function getGroupData() {
+  $groupId = $_POST['groupId'];
+  $query = "SELECT id, eventId, title FROM Groups WHERE id=$groupId";
+  $output = json_encode($GLOBALS['db']->query($query)->fetch_object());
+  return $output;
 }
 
-function addProfilePicture($emailAddr, $profilePicture) {
-  fwrite(fopen("profilePictures/$emailAddr.png","w"), $profilePicture);
+function getGroupLeaderEmails() {
+  $groupId = $_POST['groupId'];
+  $query = "SELECT emailAddr FROM Groups_Users WHERE groupId=$groupId AND isLeader=1";
+  $all_results = [];
+  $result = $GLOBALS['db']->query($query);
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $emailAddr = $result->fetch_object()->emailAddr;
+    array_push($all_results, $emailAddr);
+  }
+  return json_encode($all_results);
 }
 
-// idea: add $admins to database too
-function createNewEvent($eventName, $ownerEmail, $adminsEmails = null) {
-  $db = $GLOBALS['db'];
-  // add event
-  $result = $db->query(
-    "INSERT INTO Events (title) VALUES ('$eventName');"
-  );
-  if (!$result) return "creating event failed: " . $db->error;
-
-  // add event-owner connection
-  $eventId = $db->insert_id;
-  echo($eventId);
-  $result = $db->query(
-    "INSERT INTO Events_Users (eventId, emailAddr, isAdmin, isOwner)
-    VALUES ($eventId, '$ownerEmail', true, true);"
-  );
-
-  return "success";
+function getGroupMemberEmails() {
+  $groupId = $_POST['groupId'];
+  $query = "SELECT emailAddr FROM Groups_Users WHERE groupId=$groupId AND isLeader=0";
+  $all_results = [];
+  $result = $GLOBALS['db']->query($query);
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $emailAddr = $result->fetch_object()->emailAddr;
+    array_push($all_results, $emailAddr);
+  }
+  return json_encode($all_results);
 }
 
-function test() {
-  $name = 'Parker';
+function getGroupSessionIds() {
+  $groupId = $_POST['groupId'];
+  $query = "SELECT sessionId FROM Groups_Sessions WHERE groupId=$groupId";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i++) {
+    $sessionIdObj = $result->fetch_object();
+    $sessionId = (int) $sessionIdObj->sessionId;
+    array_push($all_results, $sessionId);
+  }
+  $output = json_encode($all_results);
+  return $output;
+}
+
+function getSessionGroupIds() {
+  $sessionId = $_POST['sessionId'];
+  $query = "SELECT groupId FROM Groups_Sessions WHERE sessionId=$sessionId";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i++) {
+    $groupIdObj = $result->fetch_object();
+    $groupId = (int) $groupIdObj->groupId;
+    array_push($all_results, $groupId);
+  }
+  $output = json_encode($all_results);
+  return $output;
+}
+
+function getUserGroupIds() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $query = "SELECT groupId FROM Groups_Users WHERE emailAddr='$emailAddr'";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $groupId = (int)$result->fetch_object()->groupId;
+    array_push($all_results, $groupId);
+  }
+  return json_encode($all_results);
+}
+
+function getUserAdminEventIds() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $query = "SELECT eventId FROM Events_Users WHERE emailAddr='$emailAddr' AND isAdmin=1";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $eventId = (int) $result->fetch_object()->eventId;
+    array_push($all_results, $eventId);
+  }
+  return json_encode($all_results);
+}
+
+function getUserParticipantEventIds() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $query = "SELECT eventId FROM Events_Users WHERE emailAddr='$emailAddr' AND isAdmin=0";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $eventId = $result->fetch_object()->eventId;
+    array_push($all_results, $eventId);
+  }
+  return json_encode($all_results);
+}
+
+function getUserEventSessions() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $query = "SELECT DISTINCT groups_sessions.sessionId FROM groups_sessions INNER JOIN groups_users ON groups_sessions.groupId=groups_users.groupId WHERE groups_users.emailAddr='$emailAddr'";
+  // $groupIdsQuery = "SELECT groupId FROM Groups_Users WHERE emailAddr='$emailAddr'";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $sessionId = (int) $result->fetch_object()->sessionId;
+    array_push($all_results, $sessionId);
+  }
+  return json_encode($all_results);
+
 }

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useReducer } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { Auth0Context } from './contexts/auth0-context'
 import styled from 'styled-components'
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
@@ -8,8 +8,7 @@ import { LoginPage } from './pages/LoginPage'
 import { VerificationPage } from './pages/VerificationPage'
 import { HomePage } from './pages/HomePage'
 
-import { signIn } from './phpHelper'
-// import useAsyncReducer from './asyncReducer'
+import AppUser from './classes/AppUser'
 
 const LoadingScreen = styled.div`
   width: 100%;
@@ -17,53 +16,28 @@ const LoadingScreen = styled.div`
   background: url(${require('./images/loading.gif')}) center center no-repeat;
 `
 
-export function init(authUser) {
-  console.log('signIn', authUser.signIn)
-  if (authUser.signIn) {
-    signIn(authUser).then(res => console.log(res))
-  }
-
-  if (!authUser.email_verified) {
-    console.log('init rejected')
-    return { email_verified: false, signIn: false, potato: 1 }
-  }
-  console.log('init accepted')
-
-  // todo: handling caching should happen here
-
-  return { email_verified: true, signIn: false }
+// pulls data from server if not in cache
+async function getAppData(authUser) {
+  const appUser = await AppUser.fetch(authUser.email)
+  return { isLoading: false, currentEvent: null, appUser }
 }
 
-function reducer(state, action) {
-  // if (!state.email_verified) return { ...state }
-  switch (action.type) {
-    case 'init':
-      return init(action.authUser)
-    case 'test':
-      console.log('action working!')
-      break
-    default:
-      throw new Error()
-  }
-}
-
-export const EventPlannerDispatch = React.createContext()
+export const AppState = React.createContext()
 
 function App() {
   const { isAuthLoading, user } = useContext(Auth0Context)
-  const [state, dispatch] = useReducer(
-    reducer,
-    { email_verified: false, signIn: false, potato: 0 },
-    init
-  )
+  const [state, setState] = useState({ potato: -1 })
 
   useEffect(() => {
     console.log(user)
-    console.log(state)
-  })
+    if (user && user.email_verified) {
+      setState({ isLoading: true })
+      getAppData(user).then(res => setState(res))
+    }
+  }, [user])
 
   return (
-    <EventPlannerDispatch.Provider value={dispatch}>
+    <AppState.Provider value={{ state, setState }}>
       <Layout>
         {(isAuthLoading || state.isLoading) && <LoadingScreen />}
         {!isAuthLoading && !user && <LoginPage />}
@@ -80,8 +54,9 @@ function App() {
           </>
         )}
         {/* <img id="image1" alt="profile pic" /> */}
+        {JSON.stringify(state)}
       </Layout>
-    </EventPlannerDispatch.Provider>
+    </AppState.Provider>
   )
 }
 

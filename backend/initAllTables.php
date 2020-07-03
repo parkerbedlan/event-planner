@@ -7,7 +7,7 @@ if (!tableExists("Events")) {
     "CREATE TABLE `Events` (
       id serial,
       title varchar(63) NOT NULL,
-      abrvTitle varchar(4) NOT NULL,
+      shortTitle varchar(24) NOT NULL,
       PRIMARY KEY (id)
     );"
   );
