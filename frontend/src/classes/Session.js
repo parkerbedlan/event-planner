@@ -1,4 +1,4 @@
-import { getSessionData, getSessionGroupIds } from '../phpHelper'
+import { getPHP } from '../phpHelper'
 
 export default class Session {
   constructor(
@@ -24,8 +24,8 @@ export default class Session {
   }
 
   static async fetch(sessionId) {
-    const sessionData = await getSessionData(sessionId)
-    const groupIds = await getSessionGroupIds(sessionId)
+    const sessionData = await getPHP('getSessionData', { sessionId })
+    const groupIds = await getPHP('getSessionGroupIds', { sessionId })
 
     return new Session(
       Number(sessionData.id),

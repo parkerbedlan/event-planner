@@ -6,8 +6,8 @@ if (!tableExists("Events")) {
   $db->query(
     "CREATE TABLE `Events` (
       id serial,
-      title varchar(63) NOT NULL,
-      shortTitle varchar(24) NOT NULL,
+      title VARCHAR(63) NOT NULL,
+      shortTitle VARCHAR(24) NOT NULL,
       PRIMARY KEY (id)
     );"
   );
@@ -18,12 +18,12 @@ if (!tableExists("Sessions")) {
     "CREATE TABLE `Sessions` (
       id serial,
       eventId BIGINT UNSIGNED NOT NULL,
-      title varchar(63) NOT NULL,
-      description varchar(255),
+      title VARCHAR(63) NOT NULL,
+      description VARCHAR(255),
       startTime timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
       endTime timestamp NOT NULL DEFAULT startTime,
-      link varchar(255),
-      location varchar(127),
+      link VARCHAR(255),
+      location VARCHAR(127),
       PRIMARY KEY (id),
       FOREIGN KEY (eventId) REFERENCES Events(id) ON DELETE CASCADE
     );"
@@ -33,9 +33,9 @@ if (!tableExists("Sessions")) {
 if (!tableExists("Users")) {
   $db->query(
     "CREATE TABLE `Users` (
-      emailAddr varchar(255) NOT NULL,
-      firstName varchar(31),
-      lastName varchar(31),
+      emailAddr VARCHAR(255) NOT NULL,
+      firstName VARCHAR(31),
+      lastName VARCHAR(31),
       isActivated bit NOT NULL,
       PRIMARY KEY (emailAddr)
     );"
@@ -47,7 +47,7 @@ if (!tableExists("Groups")) {
     "CREATE TABLE `Groups` (
       id serial,
       eventId BIGINT UNSIGNED NOT NULL,
-      title varchar(63) NOT NULL,
+      title VARCHAR(63) NOT NULL,
       PRIMARY KEY (id),
       FOREIGN KEY (eventId) REFERENCES Events(id) ON DELETE CASCADE
     );"
@@ -58,7 +58,7 @@ if (!tableExists("Events_Users")) {
   $db->query(
     "CREATE TABLE `Events_Users` (
       eventId BIGINT UNSIGNED NOT NULL,
-      emailAddr varchar(255) NOT NULL,
+      emailAddr VARCHAR(255) NOT NULL,
       isAdmin bit NOT NULL,
       isOwner bit NOT NULL,
       FOREIGN KEY (eventId) REFERENCES Events(id) ON DELETE CASCADE,
@@ -71,7 +71,7 @@ if (!tableExists("Groups_Users")) {
   $db->query(
     "CREATE TABLE `Groups_Users` (
       groupId BIGINT UNSIGNED NOT NULL,
-      emailAddr varchar(255) NOT NULL,
+      emailAddr VARCHAR(255) NOT NULL,
       isLeader bit NOT NULL,
       FOREIGN KEY (groupId) REFERENCES Groups(id) ON DELETE CASCADE,
       FOREIGN KEY (emailAddr) REFERENCES Users(emailAddr) ON DELETE CASCADE
@@ -89,7 +89,6 @@ if (!tableExists("Groups_Sessions")) {
     );"
   );
 }
-
 
 $db->close();
 

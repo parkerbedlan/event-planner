@@ -24,22 +24,21 @@ export default class AppUser {
     const groupIds = await getPHP('getUserGroupIds', { emailAddr })
 
     const adminEventIds = await getPHP('getUserAdminEventIds', {
-      emailAddr: emailAddr,
+      emailAddr,
     })
-    const adminEvents = new Map()
+    const adminEvents = {}
     for (const adminEventId of adminEventIds) {
-      adminEvents.set(adminEventId, await Event.fetch(adminEventId))
+      adminEvents[adminEventId] = await Event.fetch(adminEventId)
     }
 
     const participantEventIds = await getPHP('getUserParticipantEventIds', {
-      emailAddr: emailAddr,
+      emailAddr,
     })
-    const participantEvents = new Map()
+    const participantEvents = {}
     for (const participantEventId of participantEventIds) {
-      participantEvents.set(
-        participantEventId,
-        await getPHP('getUserEventSessions', { emailAddr })
-      )
+      participantEvents[
+        participantEventId
+      ] = await getPHP('getUserEventSessions', { emailAddr })
     }
 
     return new AppUser(

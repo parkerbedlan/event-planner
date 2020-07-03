@@ -224,5 +224,16 @@ function getUserEventSessions() {
     array_push($all_results, $sessionId);
   }
   return json_encode($all_results);
+}
 
+
+function getCache() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  return file_get_contents("cache/$emailAddr.json");
+}
+
+// todo: implement efficient updating process, like git push, that uses diff
+function updateCache() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  return json_encode("error: not yet implemented");
 }

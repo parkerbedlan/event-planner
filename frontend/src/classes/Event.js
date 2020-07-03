@@ -1,13 +1,7 @@
 import User from './User'
 import Session from './Session'
 import Group from './Group'
-import {
-  getEventData,
-  getAdmins,
-  getParticipants,
-  getEventSessionIds,
-  getEventGroupIds,
-} from '../phpHelper'
+import { getPHP } from '../phpHelper'
 
 export default class Event {
   constructor(id, title, shortTitle, admins, participants, sessions, groups) {
@@ -21,30 +15,30 @@ export default class Event {
   }
 
   static async fetch(eventId) {
-    const eventData = await getEventData(eventId)
+    const eventData = await getPHP('getEventData', { eventId })
 
-    const adminsData = await getAdmins(eventId)
-    const admins = new Map()
+    const adminsData = await getPHP('getAdmins', { eventId })
+    const admins = {}
     for (const adminData of adminsData) {
-      admins.set(adminData.emailAddr, new User(adminData))
+      admins[adminData.emailAddr] = new User(adminData)
     }
 
-    const participantsData = await getParticipants(eventId)
-    const participants = new Map()
+    const participantsData = await getPHP('getParticipants', { eventId })
+    const participants = {}
     for (const participantData of participantsData) {
-      participants.set(participantData.emailAddr, new User(participantData))
+      participants[participantData.emailAddr] = new User(participantData)
     }
 
-    const sessionIds = await getEventSessionIds(eventId)
-    let sessions = new Map()
+    const sessionIds = await getPHP('getEventSessionIds', { eventId })
+    let sessions = {}
     for (const sessionId of sessionIds) {
-      sessions.set(sessionId, await Session.fetch(sessionId))
+      sessions[sessionId] = await Session.fetch(sessionId)
     }
 
-    const groupIds = await getEventGroupIds(eventId)
-    let groups = new Map()
+    const groupIds = await getPHP('getEventGroupIds', { eventId })
+    let groups = {}
     for (const groupId of groupIds) {
-      groups.set(groupId, await Group.fetch(groupId))
+      groups[groupId] = await Group.fetch(groupId)
     }
 
     return new Event(

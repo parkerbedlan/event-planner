@@ -1,9 +1,4 @@
-import {
-  getGroupData,
-  getGroupLeaderEmails,
-  getGroupMemberEmails,
-  getGroupSessionIds,
-} from '../phpHelper'
+import { getPHP } from '../phpHelper'
 
 export default class Group {
   constructor(id, eventId, title, leaderEmails, memberEmails, sessionIds) {
@@ -16,10 +11,10 @@ export default class Group {
   }
 
   static async fetch(groupId) {
-    const groupData = await getGroupData(groupId)
-    const leaderEmails = await getGroupLeaderEmails(groupId)
-    const memberEmails = await getGroupMemberEmails(groupId)
-    const sessionIds = await getGroupSessionIds(groupId)
+    const groupData = await getPHP('getGroupData', { groupId })
+    const leaderEmails = await getPHP('getGroupLeaderEmails', { groupId })
+    const memberEmails = await getPHP('getGroupMemberEmails', { groupId })
+    const sessionIds = await getPHP('getGroupSessionIds', { groupId })
     return new Group(
       Number(groupData.id),
       groupData.eventId,

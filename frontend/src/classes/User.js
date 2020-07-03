@@ -1,4 +1,4 @@
-import { getProfilePic, getUserData } from '../phpHelper'
+import { getPHP } from '../phpHelper'
 
 export default class User {
   constructor({ emailAddr, firstName, lastName }, profilePic = null) {
@@ -9,7 +9,7 @@ export default class User {
   }
 
   static async fetch(emailAddr) {
-    const userData = await getUserData(emailAddr)
+    const userData = await getPHP('getUserData', { emailAddr })
     return new User(userData)
   }
 
@@ -19,7 +19,11 @@ export default class User {
   }
 
   async updateProfilePic() {
-    this.profilePic = await getProfilePic(this.emailAddr)
+    this.profilePic = await getPHP(
+      'getProfilePic',
+      { emailAddr: this.emailAddr },
+      'blob'
+    )
   }
 
   sayHi() {
