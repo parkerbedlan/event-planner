@@ -9,6 +9,7 @@ import VerificationPage from './pages/VerificationPage'
 // import { TestPage } from './pages/TestPage'
 import NoMatchPage from './pages/NoMatchPage'
 import EventsPage from './pages/EventsPage'
+import SessionsPage from './pages/SessionsPage'
 
 import AppUser from './classes/AppUser'
 import { getPHP } from './phpHelper'
@@ -49,7 +50,6 @@ function App() {
         )
         setState({
           isLoading: false,
-          currentEvent: null,
           updated: false,
           appUser: JSON.parse(appUserCached),
           appUserProfilePic,
@@ -57,7 +57,6 @@ function App() {
         const appUser = await getAppData(user)
         setState({
           isLoading: false,
-          currentEvent: false,
           updated: true,
           appUser,
           appUserProfilePic: appUser.profilePic,
@@ -77,16 +76,19 @@ function App() {
         {(isAuthLoading || state.isLoading) && <LoadingScreen />}
         {!isAuthLoading && !user && <LoginPage />}
         {!isAuthLoading && user && !user.email_verified && <VerificationPage />}
-        {!isAuthLoading && user && user.email_verified && !state.currentEvent && (
+        {!isAuthLoading && user && user.email_verified && state.appUser && (
           <>
             <NavigationBar
-              currentEvent={state.currentEvent}
               profilePic={state.appUserProfilePic}
+              adminEvents={state.appUser.adminEvents}
             />
             <Router>
               <Switch>
                 <Route exact path="/">
-                  <EventsPage />
+                  <EventsPage appUser={state.appUser} />
+                </Route>
+                <Route path="/sessions">
+                  <SessionsPage appUser={state.appUser} />
                 </Route>
                 <Route component={NoMatchPage} />
               </Switch>

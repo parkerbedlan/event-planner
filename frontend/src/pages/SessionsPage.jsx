@@ -1,7 +1,8 @@
-import React, { useContext } from 'react'
-import { Auth0Context } from '../contexts/auth0-context'
-import Button from 'react-bootstrap/Button'
+import React from 'react'
 import styled from 'styled-components'
+import Cookies from 'universal-cookie'
+
+const cookies = new Cookies()
 
 const Styles = styled.div`
   * {
@@ -10,14 +11,17 @@ const Styles = styled.div`
 `
 
 // special message if no events
-export function SessionsPage() {
-  const { logout } = useContext(Auth0Context)
+export default function SessionsPage({ appUser }) {
+  const currentEventId = cookies.get('currentEventId')
+  if (!currentEventId) window.location.href = '../'
+
+  const event = appUser.adminEvents[currentEventId]
   return (
     <Styles>
-      <h1>You're signed in.</h1>
-      <Button onClick={logout} size="lg">
-        Log out
-      </Button>
+      <h1>Sessions</h1>
+      {Object.values(event.sessions).map(session => (
+        <h3 key={session.id}>{session.title}</h3>
+      ))}
     </Styles>
   )
 }

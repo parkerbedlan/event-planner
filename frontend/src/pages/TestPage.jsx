@@ -13,7 +13,7 @@ const Styles = styled.div`
 `
 
 // todo: special Toasts message if no events
-export function TestPage(props) {
+export default function TestPage(props) {
   const [debugMsg, setDebugMsg] = useState('no debug message yet')
   const [objTest, setObjTest] = useState({ potato: 'poetahtoe' })
   const { logout, user } = useContext(Auth0Context)
