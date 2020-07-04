@@ -233,7 +233,17 @@ function getCache() {
 }
 
 // todo: implement efficient updating process, like git push, that uses diff
-function updateCache() {
+function setCache() {
   $emailAddr = json_decode($_POST['emailAddr']);
-  return json_encode("error: not yet implemented");
+  $jsonData = $_POST['jsonData'];
+  fwrite(fopen("cache/$emailAddr.json", "w"), $jsonData);
+  return json_encode("updated cache");
+}
+
+function setUserFirstName() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $firstName = json_decode($_POST['firstName']);
+  $query = "UPDATE Users SET firstName='$firstName' WHERE emailAddr='$emailAddr'";
+  $result = $GLOBALS['db']->query($query);
+  return json_encode($result);
 }

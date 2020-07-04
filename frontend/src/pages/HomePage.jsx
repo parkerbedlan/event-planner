@@ -4,6 +4,7 @@ import Button from 'react-bootstrap/Button'
 import styled from 'styled-components'
 import { AppState } from '../App'
 import AppUser from '../classes/AppUser'
+import { getPHP } from '../phpHelper'
 
 const Styles = styled.div`
   * {
@@ -17,7 +18,7 @@ export function HomePage(props) {
   const [objTest, setObjTest] = useState({ potato: 'poetahtoe' })
   const { logout, user } = useContext(Auth0Context)
 
-  const { setState } = useContext(AppState)
+  const { setState, state } = useContext(AppState)
   return (
     <Styles>
       <h1>You're signed in.</h1>
@@ -37,7 +38,22 @@ export function HomePage(props) {
         Debug
       </Button>
       <p>{debugMsg}</p>
-      <Button variant="danger">
+      <Button
+        onClick={async () => {
+          await getPHP('setUserFirstName', {
+            emailAddr: state.appUser.emailAddr,
+            firstName: state.appUser.firstName + 'q',
+          })
+          setState({
+            ...state,
+            appUser: {
+              ...state.appUser,
+              firstName: state.appUser.firstName + 'q',
+            },
+          })
+        }}
+        variant="danger"
+      >
         Add a silent 'q' to the end of your first name
       </Button>
     </Styles>
