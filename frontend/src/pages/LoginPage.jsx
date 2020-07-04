@@ -9,7 +9,7 @@ const Styles = styled.div`
   }
 `
 
-export function LoginPage() {
+export default function LoginPage() {
   const { loginWithRedirect } = useContext(Auth0Context)
 
   return (

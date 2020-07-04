@@ -7,7 +7,7 @@ const Styles = styled.div`
   }
 `
 //make it a <ol>
-export function VerificationPage() {
+export default function VerificationPage() {
   return (
     <Styles>
       <h1>Next steps:</h1>

@@ -27,8 +27,11 @@ export async function getPHP(methodName, options = {}, format = 'json') {
 }
 
 export function blobRender(blob, documentQuery) {
-  const urlCreator = window.URL || window.webkitURL
-  const imageUrl = urlCreator.createObjectURL(blob)
-  console.log(imageUrl)
+  const imageUrl = blobToUrl(blob)
   document.querySelector(documentQuery).src = imageUrl
+}
+
+export function blobToUrl(blob) {
+  const urlCreator = window.URL // || window.webkitURL
+  return urlCreator.createObjectURL(blob)
 }
