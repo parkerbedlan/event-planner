@@ -10,7 +10,6 @@ const Styles = styled.div`
   }
 `
 
-// special message if no events
 export default function SessionsPage({ appUser }) {
   const currentEventId = cookies.get('currentEventId')
   if (!currentEventId) window.location.href = '../'
@@ -20,7 +19,10 @@ export default function SessionsPage({ appUser }) {
     <Styles>
       <h1>Sessions</h1>
       {Object.values(event.sessions).map(session => (
-        <h3 key={session.id}>{session.title}</h3>
+        <h3 key={session.id}>
+          {session.startTime.substring(0, 10) + ' - '}
+          <strong>{session.title}</strong>
+        </h3>
       ))}
     </Styles>
   )

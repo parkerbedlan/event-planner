@@ -40,9 +40,16 @@ function App() {
     if (user && user.email_verified) {
       setState({ isLoading: true })
       async function f() {
-        const appUserCached = await getPHP('getCache', {
-          emailAddr: user.email,
-        })
+        let appUserCached
+        try {
+          appUserCached = await getPHP('getCache', {
+            emailAddr: user.email,
+          })
+        } catch {
+          setState({ isLoading: false })
+          return alert('Failed to connect to server :(')
+        }
+
         const appUserProfilePic = await getPHP(
           'getProfilePic',
           { emailAddr: user.email },
