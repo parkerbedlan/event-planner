@@ -1,7 +1,17 @@
-import React, { useState } from 'react'
-import { Toast, Card } from 'react-bootstrap'
+import React, { useState, useEffect, useRef, useContext } from 'react'
+import {
+  Toast,
+  Card,
+  Modal,
+  Button,
+  Form,
+  ListGroup,
+  Spinner,
+} from 'react-bootstrap'
 import styled from 'styled-components'
 import Cookies from 'universal-cookie'
+import { getPHP, sanitize, isEmail } from '../phpHelper'
+import { getAppData, AppState } from '../App'
 
 const cookies = new Cookies()
 
@@ -9,6 +19,10 @@ const Styles = styled.div`
   .card {
     float: left;
     width: 15rem;
+  }
+
+  [aria-label*='X']:hover {
+    cursor: pointer;
   }
 `
 
@@ -29,12 +43,7 @@ export default function EventsPage({ appUser }) {
           }}
         />
       ))}
-      <Card style={{ float: 'none' }} className="btn btn-outline-secondary m-3">
-        <Card.Body>
-          <Card.Img src={require('../images/new.png')} />
-          <Card.Title>Create New Event</Card.Title>
-        </Card.Body>
-      </Card>
+      <CreateEventCard appUserEmail={appUser.emailAddr} />
       <hr />
       <h1>Participant Events</h1>
       {Object.values(appUser.participantEvents).length ? (
@@ -66,6 +75,253 @@ function EventCard({ event, onClick }) {
         <Card.Title className="align-middle">{event.title}</Card.Title>
       </Card.Body>
     </Card>
+  )
+}
+
+function CreateEventCard({ appUserEmail }) {
+  const [show, setShow] = useState(false)
+  const [title, setTitle] = useState('')
+  const [shortTitle, setShortTitle] = useState('')
+  const [group, setGroup] = useState('')
+  const [groupList, setGroupList] = useState([])
+  const [admin, setAdmin] = useState('')
+  const [adminList, setAdminList] = useState([])
+  const [participant, setParticipant] = useState('')
+  const [participantList, setParticipantList] = useState([])
+  const [showSpinner, setShowSpinner] = useState(false)
+  const titleField = useRef(null)
+  const { setState } = useContext(AppState)
+
+  useEffect(() => {
+    if (show && titleField) titleField.current.focus()
+  }, [show, titleField])
+
+  const clearAllFields = () => {
+    setTitle('')
+    setShortTitle('')
+    setGroup('')
+    setGroupList([])
+    setAdmin('')
+    setAdminList([])
+    setParticipant('')
+    setParticipantList([])
+    setShowSpinner(false)
+  }
+
+  return (
+    <>
+      <Card
+        onClick={() => setShow(true)}
+        style={{ float: 'none' }}
+        className="btn btn-outline-secondary m-3"
+      >
+        <Card.Body>
+          <Card.Img src={require('../images/new.png')} />
+          <Card.Title>Create New Event</Card.Title>
+        </Card.Body>
+      </Card>
+
+      <Modal
+        show={show}
+        onHide={() => setShow(false)}
+        backdrop="static"
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <h4>Create New Event</h4>
+        </Modal.Header>
+        <Form className="m-3 ">
+          <Form.Group>
+            <Form.Label>Event Title</Form.Label>
+            <Form.Control
+              ref={titleField}
+              value={title}
+              onChange={e => {
+                setTitle(e.target.value)
+              }}
+              placeholder="Event Title"
+              maxlength="63"
+            />
+          </Form.Group>
+          {title.trim().length > 24 && (
+            <Form.Group>
+              <Form.Label>Shortened Title</Form.Label>
+              <Form.Control
+                value={shortTitle}
+                onChange={e => {
+                  setShortTitle(e.target.value)
+                }}
+                isValid={
+                  shortTitle.trim().length <= 24 &&
+                  shortTitle.trim().length !== 0
+                }
+                isInvalid={
+                  !(
+                    shortTitle.trim().length <= 24 &&
+                    shortTitle.trim().length !== 0
+                  )
+                }
+                placeholder="Short Title"
+                maxlength="24"
+              />
+              <Form.Text className="text-muted">
+                <strong>{24 - shortTitle.trim().length}</strong> characters left
+              </Form.Text>
+            </Form.Group>
+          )}
+          <br />
+          <Form.Group>
+            <Form.Label>Group Names (optional)</Form.Label>
+            <Form.Control
+              value={group}
+              onChange={e => setGroup(e.target.value)}
+              onKeyPress={e => {
+                if (e.key === 'Enter') {
+                  setGroupList([...groupList, group])
+                  setGroup('')
+                }
+              }}
+            />
+            <Form.Text className="text-muted">
+              (Press Enter to submit each one)
+            </Form.Text>
+            <br />
+            <ListGroup>
+              {groupList.map(group => (
+                <ListGroup.Item key={group}>
+                  <Button
+                    onClick={() => {
+                      setGroupList(groupList.filter(g => g !== group))
+                    }}
+                    variant="light"
+                    size="sm"
+                  >
+                    <span role="img" aria-label="X">
+                      &#10060;
+                    </span>
+                  </Button>
+                  {group}
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          </Form.Group>
+          <Form.Group>
+            <Form.Label>Admin Emails (optional)</Form.Label>
+            <Form.Control
+              value={admin}
+              onChange={e => setAdmin(e.target.value)}
+              onKeyPress={e => {
+                if (e.key === 'Enter') {
+                  if (isEmail(admin)) {
+                    setAdminList([...adminList, admin])
+                    setAdmin('')
+                  } else {
+                    alert('Must be an email.')
+                  }
+                }
+              }}
+            />
+            <br />
+            <ListGroup>
+              {adminList.map(admin => (
+                <ListGroup.Item key={admin}>
+                  <Button
+                    onClick={() => {
+                      setAdminList(adminList.filter(a => a !== admin))
+                    }}
+                    variant="light"
+                    size="sm"
+                  >
+                    <span role="img" aria-label="X">
+                      &#10060;
+                    </span>
+                  </Button>
+                  {admin}
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          </Form.Group>
+
+          <Form.Group>
+            <Form.Label>Participant Emails (optional)</Form.Label>
+            <Form.Control
+              value={participant}
+              onChange={e => setParticipant(e.target.value)}
+              onKeyPress={e => {
+                if (e.key === 'Enter') {
+                  if (isEmail(participant)) {
+                    setParticipantList([...participantList, participant])
+                    setParticipant('')
+                  } else {
+                    alert('Must be an email.')
+                  }
+                }
+              }}
+            />
+            <br />
+            <ListGroup>
+              {participantList.map(participant => (
+                <ListGroup.Item key={participant}>
+                  <Button
+                    onClick={() => {
+                      setParticipantList(
+                        participantList.filter(a => a !== participant)
+                      )
+                    }}
+                    variant="light"
+                    size="sm"
+                  >
+                    <span role="img" aria-label="X">
+                      &#10060;
+                    </span>
+                  </Button>
+                  {participant}
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          </Form.Group>
+        </Form>
+        <Modal.Footer>
+          <Button
+            onClick={() => {
+              setShow(false)
+              clearAllFields()
+            }}
+            variant="secondary"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              if (
+                !showSpinner &&
+                (shortTitle.trim() || title.trim().length <= 24)
+              ) {
+                setShowSpinner(true)
+                let safeTitle = 'Event Title'
+                if (title.trim()) safeTitle = title
+                await getPHP('addEvent', {
+                  owner: appUserEmail,
+                  title: sanitize(safeTitle),
+                  shortTitle: shortTitle.trim()
+                    ? sanitize(shortTitle)
+                    : sanitize(safeTitle),
+                  groupList: groupList.map(g => sanitize(g)),
+                  adminList,
+                  participantList,
+                })
+                await getAppData(appUserEmail, setState)
+                setShow(false)
+                clearAllFields()
+              }
+            }}
+          >
+            Save changes{' '}
+            {showSpinner && <Spinner animation="border" variant="light" />}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
   )
 }
 

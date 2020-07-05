@@ -50,3 +50,7 @@ function updateUser($emailAddr, $firstName, $lastName) {
 function addProfilePicture($emailAddr, $profilePicture) {
   fwrite(fopen("profilePictures/$emailAddr.png","w"), $profilePicture);
 }
+
+function addEmailAddr($emailAddr) {
+  $GLOBALS['db']->query("INSERT INTO Users (emailAddr) VALUES (\"$emailAddr\"");
+}

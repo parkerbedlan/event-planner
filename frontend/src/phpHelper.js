@@ -1,3 +1,15 @@
+export function isEmail(input) {
+  return /^\w+@(\w+[.])+\w+$/.test(input)
+}
+
+export function sanitize(input) {
+  return input
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/[$]/g, '\\$')
+    .trim()
+}
+
 export async function signIn(authUser) {
   console.log('Signing in...')
   return await getPHP('signIn', { user: authUser })

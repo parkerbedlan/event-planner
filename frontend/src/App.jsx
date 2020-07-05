@@ -6,10 +6,11 @@ import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
 import VerificationPage from './pages/VerificationPage'
-// import { TestPage } from './pages/TestPage'
 import NoMatchPage from './pages/NoMatchPage'
 import EventsPage from './pages/EventsPage'
 import SessionsPage from './pages/SessionsPage'
+import AdminsPage from './pages/AdminsPage'
+import ParticipantsPage from './pages/ParticipantsPage'
 
 import AppUser from './classes/AppUser'
 import { getPHP } from './phpHelper'
@@ -21,13 +22,18 @@ const LoadingScreen = styled.div`
   background: url(${require('./images/loading.gif')}) center center no-repeat;
 `
 
-async function getAppData(authUser) {
-  const appUser = await AppUser.fetch(authUser.email)
+export async function getAppData(emailAddr, setState) {
+  const appUser = await AppUser.fetch(emailAddr)
   await getPHP('setCache', {
     emailAddr: appUser.emailAddr,
     jsonData: JSON.stringify(appUser),
   })
-  return appUser
+  setState({
+    isLoading: false,
+    updated: true,
+    appUser,
+    appUserProfilePic: appUser.profilePic,
+  })
 }
 
 export const AppState = React.createContext()
@@ -46,10 +52,20 @@ function App() {
             emailAddr: user.email,
           })
         } catch {
-          setState({ isLoading: false })
-          return alert('Failed to connect to server :(')
+          try {
+            const appUser = await getAppData(user)
+            setState({
+              isLoading: false,
+              updated: true,
+              appUser,
+              appUserProfilePic: appUser.profilePic,
+            })
+            return
+          } catch {
+            setState({ isLoading: false })
+            return alert('Failed to connect to server :(')
+          }
         }
-
         const appUserProfilePic = await getPHP(
           'getProfilePic',
           { emailAddr: user.email },
@@ -61,13 +77,7 @@ function App() {
           appUser: JSON.parse(appUserCached),
           appUserProfilePic,
         })
-        const appUser = await getAppData(user)
-        setState({
-          isLoading: false,
-          updated: true,
-          appUser,
-          appUserProfilePic: appUser.profilePic,
-        })
+        await getAppData(user.email, setState)
       }
       f()
     }
@@ -96,6 +106,12 @@ function App() {
                 </Route>
                 <Route path="/sessions">
                   <SessionsPage appUser={state.appUser} />
+                </Route>
+                <Route path="/admins">
+                  <AdminsPage appUser={state.appUser} />
+                </Route>
+                <Route path="/participants">
+                  <ParticipantsPage appUser={state.appUser} />
                 </Route>
                 <Route component={NoMatchPage} />
               </Switch>

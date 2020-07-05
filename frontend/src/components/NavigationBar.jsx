@@ -46,7 +46,7 @@ export default function NavigationBar({ profilePic, adminEvents }) {
                 <Nav.Link href="/participants">
                   <h5>Participants</h5>
                 </Nav.Link>
-                <Nav.Link href="/notifications">
+                <Nav.Link disabled href="/notifications">
                   <h5>Notifications</h5>
                 </Nav.Link>
                 <ProfileDropdown profilePic={profilePic} />
@@ -70,6 +70,7 @@ function EventDropdown({ adminEvents }) {
       {Object.values(adminEvents).map(event => {
         return (
           <NavDropdown.Item
+            key={event.id}
             onClick={() => {
               cookies.set('currentEventId', event.id)
               window.location.reload()

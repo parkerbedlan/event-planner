@@ -232,7 +232,6 @@ function getCache() {
   return file_get_contents("cache/$emailAddr.json");
 }
 
-// todo: implement efficient updating process, like git push, that uses diff
 function setCache() {
   $emailAddr = json_decode($_POST['emailAddr']);
   $jsonData = $_POST['jsonData'];
@@ -243,7 +242,37 @@ function setCache() {
 function setUserFirstName() {
   $emailAddr = json_decode($_POST['emailAddr']);
   $firstName = json_decode($_POST['firstName']);
-  $query = "UPDATE Users SET firstName='$firstName' WHERE emailAddr='$emailAddr'";
+  $query = "UPDATE Users SET firstName=\"$firstName\" WHERE emailAddr='$emailAddr'";
   $result = $GLOBALS['db']->query($query);
   return json_encode($result);
+}
+
+function addEvent() {
+  $db = $GLOBALS['db'];
+  $owner = json_decode($_POST['owner']);
+  $title = json_decode($_POST['title']);
+  $shortTitle = json_decode($_POST['shortTitle']);
+  $groupList = json_decode($_POST['groupList']);
+  $adminList = json_decode($_POST['adminList']);
+  $participantList = json_decode($_POST['participantList']);
+
+  $db->query("INSERT INTO Events (title, shortTitle) VALUES (\"$title\", \"$shortTitle\");");
+  $eventId = $db->insert_id;
+  foreach ($groupList as $groupTitle) {
+    $db->query("INSERT INTO Groups (eventId, title) VALUES ($eventId,\"$groupTitle\");");
+  }
+
+  $db->query("INSERT INTO Events_Users (eventId, emailAddr, isAdmin, isOwner) VALUES ($eventId, \"$owner\", 1, 1)");
+
+  foreach ($adminList as $adminEmailAddr) {
+    if (!userInTable($adminEmailAddr))
+      addEmailAddr($adminEmailAddr);
+    $db->query("INSERT INTO Events_Users (eventId, emailAddr, isAdmin, isOwner) VALUES ($eventId, \"$adminEmailAddr\", 1, 0)");
+  }
+  foreach ($participantList as $participantEmailAddr) {
+    if (!userInTable($participantEmailAddr))
+      addEmailAddr($participantEmailAddr);
+    $db->query("INSERT INTO Events_Users (eventId, emailAddr, isAdmin, isOwner) VALUES ($eventId, \"$participantEmailAddr\", 0, 0)");
+  }
+  return json_encode("added event to database");
 }
