@@ -15,13 +15,20 @@ export async function signIn(authUser) {
   return await getPHP('signIn', { user: authUser })
 }
 
-export async function getPHP(methodName, options = {}, format = 'json') {
+export async function getPHP(
+  methodName,
+  options = {},
+  responseFormat = 'json',
+  requestFormat = 'json'
+) {
   let output
   let formData = new FormData()
   formData.append('password', process.env.REACT_APP_PHP_PASSWORD)
   formData.append('method', methodName)
   for (const key in options) {
-    formData.append(key, JSON.stringify(options[key]))
+    if (requestFormat === 'json')
+      formData.append(key, JSON.stringify(options[key]))
+    else if (requestFormat === 'raw') formData.append(key, options[key])
   }
   await fetch('http://localhost/event-planner/backend/requestHandler.php', {
     method: 'POST',
@@ -29,8 +36,8 @@ export async function getPHP(methodName, options = {}, format = 'json') {
     body: formData,
   })
     .then(res => {
-      if (format === 'json') return res.json()
-      else if (format === 'blob') return res.blob()
+      if (responseFormat === 'json') return res.json()
+      else if (responseFormat === 'blob') return res.blob()
     })
     .then(response => {
       output = response
@@ -44,6 +51,6 @@ export function blobRender(blob, documentQuery) {
 }
 
 export function blobToUrl(blob) {
-  const urlCreator = window.URL // || window.webkitURL
+  const urlCreator = window.URL || window.webkitURL
   return urlCreator.createObjectURL(blob)
 }

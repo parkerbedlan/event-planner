@@ -48,7 +48,7 @@ function updateUser($emailAddr, $firstName, $lastName) {
 }
 
 function addProfilePicture($emailAddr, $profilePicture) {
-  fwrite(fopen("profilePictures/$emailAddr.png","w"), $profilePicture);
+  fwrite(fopen("profilePictures/$emailAddr.png","wb"), $profilePicture);
 }
 
 function addEmailAddr($emailAddr) {

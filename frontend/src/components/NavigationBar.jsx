@@ -1,8 +1,18 @@
-import React, { useContext, useState } from 'react'
-import { Nav, Navbar, Image, NavDropdown, Button, Modal } from 'react-bootstrap'
-import { blobToUrl } from '../phpHelper'
+import React, { useContext, useState, useRef, useEffect } from 'react'
+import {
+  Nav,
+  Navbar,
+  Image,
+  NavDropdown,
+  Button,
+  Modal,
+  Form,
+  Spinner,
+} from 'react-bootstrap'
+import { blobToUrl, getPHP, sanitize } from '../phpHelper'
 import { Auth0Context } from '../contexts/auth0-context'
 import Cookies from 'universal-cookie'
+import { AppState, getAppData } from '../App'
 
 const cookies = new Cookies()
 
@@ -125,23 +135,120 @@ function ProfileDropdown({ profilePic }) {
         </NavDropdown.Item>
       </NavDropdown>
 
-      <Modal
-        show={show}
-        onHide={() => setShow(false)}
-        backdrop="static"
-        size="lg"
-      >
-        <Modal.Header closeButton>
-          <h4>Edit Profile</h4>
-        </Modal.Header>
-        <h1>Edit your profile here</h1>
-        <Modal.Footer>
-          <Button onClick={() => setShow(false)} variant="secondary">
-            Cancel
-          </Button>
-          <Button onClick={() => setShow(false)}>Save changes</Button>
-        </Modal.Footer>
-      </Modal>
+      <EditProfileModal show={show} setShow={setShow} />
     </>
+  )
+}
+
+function EditProfileModal({ show, setShow }) {
+  const firstNameField = useRef(null)
+  const { state, setState } = useContext(AppState)
+  const [firstName, setFirstName] = useState(state.appUser.firstName)
+  const [lastName, setLastName] = useState(state.appUser.lastName)
+  const [profilePic, setProfilePic] = useState(state.appUserProfilePic)
+  const [showSpinner, setShowSpinner] = useState(false)
+
+  useEffect(() => {
+    if (show && firstNameField) firstNameField.current.focus()
+  }, [show, firstNameField])
+
+  useEffect(() => {
+    console.log(profilePic)
+    console.log('god help me')
+  }, [profilePic])
+
+  const clearAllFields = () => {
+    setFirstName(state.appUser.firstName)
+    setLastName(state.appUser.lastName)
+    setProfilePic(state.appUserProfilePic)
+    setShowSpinner(false)
+  }
+
+  return (
+    <Modal
+      show={show}
+      onHide={() => setShow(false)}
+      backdrop="static"
+      size="lg"
+    >
+      <Modal.Header closeButton>
+        <h4>Edit Profile</h4>
+      </Modal.Header>
+      <Form className="m-3">
+        <Form.Group>
+          <Form.Label>First Name</Form.Label>
+          <Form.Control
+            ref={firstNameField}
+            maxsize="31"
+            value={firstName}
+            onChange={e => setFirstName(e.target.value)}
+          ></Form.Control>
+        </Form.Group>
+        <Form.Group>
+          <Form.Label>Last Name</Form.Label>
+          <Form.Control
+            maxsize="31"
+            value={lastName}
+            onChange={e => setLastName(e.target.value)}
+          ></Form.Control>
+        </Form.Group>
+        <Form.Group>
+          <Form.Label>Profile Picture</Form.Label>
+          <Form.Control
+            type="file"
+            onChange={e => {
+              setProfilePic(e.target.files[0])
+            }}
+          ></Form.Control>
+          <br />
+          <Image
+            src={
+              Boolean(profilePic)
+                ? blobToUrl(profilePic)
+                : require('../images/profilePlaceholder.png')
+            }
+            width="100"
+            height="100"
+            alt="profile"
+            rounded
+          />
+        </Form.Group>
+      </Form>
+      <Modal.Footer>
+        <Button
+          onClick={() => {
+            clearAllFields()
+            setShow(false)
+          }}
+          variant="secondary"
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={async () => {
+            if (!showSpinner) {
+              setShowSpinner(true)
+              console.log(profilePic)
+              await getPHP(
+                'editUser',
+                {
+                  emailAddr: state.appUser.emailAddr,
+                  firstName: sanitize(firstName),
+                  lastName: sanitize(lastName),
+                  profilePicture: profilePic,
+                },
+                'raw'
+              )
+              await getAppData(state.appUser.emailAddr, setState)
+              setShow(false)
+              clearAllFields()
+            }
+          }}
+        >
+          Save changes
+          {showSpinner && <Spinner animation="border" variant="light" />}
+        </Button>
+      </Modal.Footer>
+    </Modal>
   )
 }

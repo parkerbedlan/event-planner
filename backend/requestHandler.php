@@ -276,3 +276,22 @@ function addEvent() {
   }
   return json_encode("added event to database");
 }
+
+function editUser() {
+  $db = $GLOBALS['db'];
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $firstName = json_decode($_POST['firstName']);
+  $lastName = json_decode($_POST['lastName']);
+  $profilePicture = base64_decode($_POST['profilePicture']);
+
+  $filename = "test.json";
+  $input = fopen('php://input','rb');
+  $file = fopen($filename,'wb');
+
+  stream_copy_to_stream($input, $file);
+
+  // updateUser($emailAddr, $firstName, $lastName);
+  fwrite(fopen("profilePictures/$emailAddr.png","wb"),$profilePicture);
+
+  return json_encode("updated user");
+}
