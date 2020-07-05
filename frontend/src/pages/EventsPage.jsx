@@ -221,6 +221,9 @@ function CreateEventCard({ appUserEmail }) {
                 }
               }}
             />
+            <Form.Text className="text-muted">
+              (Press Enter to submit each one)
+            </Form.Text>
             <br />
             <ListGroup>
               {adminList.map(admin => (
@@ -258,6 +261,9 @@ function CreateEventCard({ appUserEmail }) {
                 }
               }}
             />
+            <Form.Text className="text-muted">
+              (Press Enter to submit each one)
+            </Form.Text>
             <br />
             <ListGroup>
               {participantList.map(participant => (

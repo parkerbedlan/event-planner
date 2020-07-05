@@ -15,23 +15,6 @@ export async function signIn(authUser) {
   return await getPHP('signIn', { user: authUser })
 }
 
-// for debugging
-export async function uploadPicture(picture) {
-  let output
-  let formData = new FormData()
-  formData.append('password', process.env.REACT_APP_PHP_PASSWORD)
-  formData.append('method', 'uploadPicture')
-  formData.append('profilePicture', picture)
-  await fetch('http://localhost/event-planner/backend/requestHandler.php', {
-    method: 'POST',
-    headers: {},
-    body: formData,
-  })
-    .then(res => res.json())
-    .then(response => (output = response))
-  return output
-}
-
 export async function getPHP(
   methodName,
   options = {},

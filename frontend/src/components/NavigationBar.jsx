@@ -146,6 +146,7 @@ function EditProfileModal({ show, setShow }) {
   const [firstName, setFirstName] = useState(state.appUser.firstName)
   const [lastName, setLastName] = useState(state.appUser.lastName)
   const [profilePic, setProfilePic] = useState(state.appUserProfilePic)
+  const [picChanged, setPicChanged] = useState(false)
   const [showSpinner, setShowSpinner] = useState(false)
 
   useEffect(() => {
@@ -157,6 +158,7 @@ function EditProfileModal({ show, setShow }) {
     setLastName(state.appUser.lastName)
     setProfilePic(state.appUserProfilePic)
     setShowSpinner(false)
+    setPicChanged(false)
   }
 
   return (
@@ -192,6 +194,7 @@ function EditProfileModal({ show, setShow }) {
           <Form.Control
             type="file"
             onChange={e => {
+              setPicChanged(true)
               setProfilePic(e.target.files[0])
             }}
           ></Form.Control>
@@ -230,7 +233,7 @@ function EditProfileModal({ show, setShow }) {
                   emailAddr: state.appUser.emailAddr,
                   firstName: sanitize(firstName),
                   lastName: sanitize(lastName),
-                  profilePicture: profilePic,
+                  profilePicture: picChanged ? profilePic : null,
                 },
                 'json',
                 'raw'
@@ -238,6 +241,7 @@ function EditProfileModal({ show, setShow }) {
               await getAppData(state.appUser.emailAddr, setState)
               setShow(false)
               setShowSpinner(false)
+              setPicChanged(false)
             }
           }}
         >

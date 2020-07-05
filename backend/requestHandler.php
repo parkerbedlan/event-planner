@@ -226,7 +226,6 @@ function getUserEventSessions() {
   return json_encode($all_results);
 }
 
-
 function getCache() {
   $emailAddr = json_decode($_POST['emailAddr']);
   return file_get_contents("cache/$emailAddr.json");
@@ -282,17 +281,12 @@ function editUser() {
   $emailAddr = $_POST['emailAddr'];
   $firstName = $_POST['firstName'];
   $lastName = $_POST['lastName'];
-  $profilePicture = file_get_contents($_FILES['profilePicture']['tmp_name']);
-
   updateUser($emailAddr, $firstName, $lastName);
-  fwrite(fopen("profilePictures/$emailAddr.png","wb"),$profilePicture);
+
+  if (count($_FILES)) {
+    $profilePicture = file_get_contents($_FILES['profilePicture']['tmp_name']);
+    fwrite(fopen("profilePictures/$emailAddr.png","wb"),$profilePicture);
+  }
 
   return json_encode("updated user");
-}
-
-function uploadPicture() {
-  $db = $GLOBALS['db'];
-  $profilePicture = file_get_contents($_FILES['profilePicture']['tmp_name']);
-  fwrite(fopen('profilePictures/parkerbedlan@gmail.com.png','wb'), $profilePicture);
-  return json_encode('noice');
 }
