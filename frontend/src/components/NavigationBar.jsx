@@ -152,11 +152,6 @@ function EditProfileModal({ show, setShow }) {
     if (show && firstNameField) firstNameField.current.focus()
   }, [show, firstNameField])
 
-  useEffect(() => {
-    console.log(profilePic)
-    console.log('god help me')
-  }, [profilePic])
-
   const clearAllFields = () => {
     setFirstName(state.appUser.firstName)
     setLastName(state.appUser.lastName)
@@ -237,11 +232,12 @@ function EditProfileModal({ show, setShow }) {
                   lastName: sanitize(lastName),
                   profilePicture: profilePic,
                 },
+                'json',
                 'raw'
               )
               await getAppData(state.appUser.emailAddr, setState)
               setShow(false)
-              clearAllFields()
+              setShowSpinner(false)
             }
           }}
         >

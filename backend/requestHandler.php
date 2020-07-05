@@ -279,19 +279,20 @@ function addEvent() {
 
 function editUser() {
   $db = $GLOBALS['db'];
-  $emailAddr = json_decode($_POST['emailAddr']);
-  $firstName = json_decode($_POST['firstName']);
-  $lastName = json_decode($_POST['lastName']);
-  $profilePicture = base64_decode($_POST['profilePicture']);
+  $emailAddr = $_POST['emailAddr'];
+  $firstName = $_POST['firstName'];
+  $lastName = $_POST['lastName'];
+  $profilePicture = file_get_contents($_FILES['profilePicture']['tmp_name']);
 
-  $filename = "test.json";
-  $input = fopen('php://input','rb');
-  $file = fopen($filename,'wb');
-
-  stream_copy_to_stream($input, $file);
-
-  // updateUser($emailAddr, $firstName, $lastName);
+  updateUser($emailAddr, $firstName, $lastName);
   fwrite(fopen("profilePictures/$emailAddr.png","wb"),$profilePicture);
 
   return json_encode("updated user");
+}
+
+function uploadPicture() {
+  $db = $GLOBALS['db'];
+  $profilePicture = file_get_contents($_FILES['profilePicture']['tmp_name']);
+  fwrite(fopen('profilePictures/parkerbedlan@gmail.com.png','wb'), $profilePicture);
+  return json_encode('noice');
 }
