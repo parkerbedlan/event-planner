@@ -9,7 +9,7 @@ import {
   Form,
   Spinner,
 } from 'react-bootstrap'
-import { blobToUrl, getPHP, sanitize } from '../phpHelper'
+import { blobToUrl, getPHP, sanitize, resizeImage } from '../phpHelper'
 import { Auth0Context } from '../contexts/auth0-context'
 import Cookies from 'universal-cookie'
 import { AppState, getAppData } from '../App'
@@ -193,9 +193,12 @@ function EditProfileModal({ show, setShow }) {
           <Form.Label>Profile Picture</Form.Label>
           <Form.Control
             type="file"
-            onChange={e => {
+            onChange={async e => {
               setPicChanged(true)
-              setProfilePic(e.target.files[0])
+              // setProfilePic(e.target.files[0])
+              setProfilePic(
+                await resizeImage({ file: e.target.files[0], maxSize: 120 })
+              )
             }}
           ></Form.Control>
           <br />
