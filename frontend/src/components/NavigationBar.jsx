@@ -16,17 +16,21 @@ import { AppState, getAppData } from '../App'
 
 const cookies = new Cookies()
 
-export default function NavigationBar({ profilePic, adminEvents }) {
+export default function NavigationBar({ profilePic, adminEvents, updated }) {
   return (
     <>
       <Navbar fixed="top" bg="dark" variant="dark" expand="lg">
         <Navbar.Brand href="/">
-          <img
-            src={require('../images/logo.png')}
-            width="30"
-            height="30"
-            alt="logo"
-          />
+          {updated ? (
+            <img
+              src={require('../images/logo.png')}
+              width="30"
+              height="30"
+              alt="logo"
+            />
+          ) : (
+            <Spinner animation="border" variant="light" />
+          )}
         </Navbar.Brand>
 
         {Boolean(window.location.pathname !== '/') ? (

@@ -198,6 +198,8 @@ function NewSessionModal({ setShow, event, appUserEmail }) {
           onClick={async () => {
             if (!title.trim().length) {
               alert('Your session needs a title!')
+            } else if (!startDate || !startTime || !endDate || !endTime) {
+              alert('Your session needs a time!')
             } else if (
               new Date(`${startDate} ${startTime}`) -
                 new Date(`${endDate} ${endTime}`) >
@@ -218,9 +220,8 @@ function NewSessionModal({ setShow, event, appUserEmail }) {
                 endTime: `${endDate} ${endTime}`,
                 link: sanitize(link),
                 location: sanitize(location),
-                groups: everyone
-                  ? Object.values(event.groups).map(g => g.id)
-                  : groups,
+                groups: groups,
+                everyone,
               })
               await getAppData(appUserEmail, setState)
               setShow(false)

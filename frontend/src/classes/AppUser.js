@@ -1,5 +1,6 @@
 import { getPHP } from '../phpHelper'
 import Event from './Event'
+import Session from './Session'
 
 export default class AppUser {
   constructor(
@@ -36,13 +37,23 @@ export default class AppUser {
     })
     const participantEvents = {}
     for (const participantEventId of participantEventIds) {
+      const eventData = await getPHP('getEventData', {
+        eventId: participantEventId,
+      })
+
+      const sessionIds = await getPHP('getUserEventSessions', {
+        emailAddr,
+        eventId: participantEventId,
+      })
+      let schedule = []
+      for (const sessionId of sessionIds) {
+        schedule.push(await Session.fetch(sessionId))
+      }
+
       participantEvents[participantEventId] = {
         id: participantEventId,
-        title: 'cool title',
-        schedule: await getPHP('getUserEventSessions', {
-          emailAddr,
-          eventId: participantEventId,
-        }),
+        title: eventData.title,
+        schedule: schedule,
       }
     }
 

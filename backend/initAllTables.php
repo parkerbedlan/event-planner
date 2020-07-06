@@ -24,6 +24,7 @@ if (!tableExists("Sessions")) {
       endTime timestamp NOT NULL DEFAULT startTime,
       link VARCHAR(255),
       location VARCHAR(127),
+      everyone bit NOT NULL,
       PRIMARY KEY (id),
       FOREIGN KEY (eventId) REFERENCES Events(id) ON DELETE CASCADE
     );"

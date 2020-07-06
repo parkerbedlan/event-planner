@@ -52,5 +52,5 @@ function addProfilePicture($emailAddr, $profilePicture) {
 }
 
 function addEmailAddr($emailAddr) {
-  $GLOBALS['db']->query("INSERT INTO Users (emailAddr) VALUES (\"$emailAddr\"");
+  $GLOBALS['db']->query("INSERT INTO Users (emailAddr, isActivated) VALUES (\"$emailAddr\", 0);");
 }

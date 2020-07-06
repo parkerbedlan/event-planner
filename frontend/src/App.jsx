@@ -98,6 +98,7 @@ function App() {
             <NavigationBar
               profilePic={state.appUserProfilePic}
               adminEvents={state.appUser.adminEvents}
+              updated={state.updated}
             />
             <Router>
               <Switch>

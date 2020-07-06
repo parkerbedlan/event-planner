@@ -20,14 +20,11 @@ const Styles = styled.div`
     float: left;
     width: 15rem;
   }
-
-  [aria-label*='X']:hover {
-    cursor: pointer;
-  }
 `
 
 export default function EventsPage({ appUser }) {
   cookies.remove('currentEventId')
+  const [showParticipantEvents, setShowParticipantEvents] = useState([])
 
   return (
     <Styles>
@@ -37,7 +34,6 @@ export default function EventsPage({ appUser }) {
           key={event.id}
           event={event}
           onClick={() => {
-            console.log('clicked')
             cookies.set('currentEventId', event.id)
             window.location.href = '/sessions'
           }}
@@ -48,7 +44,23 @@ export default function EventsPage({ appUser }) {
       <h1>Participant Events</h1>
       {Object.values(appUser.participantEvents).length ? (
         Object.values(appUser.participantEvents).map(event => (
-          <EventCard key={event.id} event={event} />
+          <React.Fragment key={event.id}>
+            <EventCard
+              event={event}
+              onClick={() => {
+                setShowParticipantEvents([...showParticipantEvents, event.id])
+              }}
+            />
+            <ParticipantEventModal
+              event={event}
+              show={showParticipantEvents.includes(event.id)}
+              onHide={() =>
+                setShowParticipantEvents(
+                  showParticipantEvents.filter(p => p !== event.id)
+                )
+              }
+            />
+          </React.Fragment>
         ))
       ) : (
         <>
@@ -58,6 +70,26 @@ export default function EventsPage({ appUser }) {
       )}
       <NoEventsToast appUser={appUser} />
     </Styles>
+  )
+}
+
+function ParticipantEventModal({ event, show, onHide }) {
+  return (
+    <Modal show={show} onHide={onHide} size="lg">
+      <Modal.Header closeButton>
+        <h4>Your Schedule</h4>
+      </Modal.Header>
+      <div className="m-3">
+        <h2>{event.title}</h2>
+        {event.schedule.map(session => {
+          return (
+            <h3>
+              {session.startTime} - {session.title}
+            </h3>
+          )
+        })}
+      </div>
+    </Modal>
   )
 }
 
@@ -299,7 +331,9 @@ function CreateEventCard({ appUserEmail }) {
           </Button>
           <Button
             onClick={async () => {
-              if (
+              if (admin || participant || group) {
+                alert("Hit Enter to submit what you've typed!")
+              } else if (
                 !showSpinner &&
                 (shortTitle.trim() || title.trim().length <= 24)
               ) {

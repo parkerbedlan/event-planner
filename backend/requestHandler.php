@@ -251,12 +251,12 @@ function addEvent() {
   $db->query("INSERT INTO Events_Users (eventId, emailAddr, isAdmin, isOwner) VALUES ($eventId, \"$owner\", 1, 1)");
   
   foreach ($adminList as $adminEmailAddr) {
-    if (!userInTable($adminEmailAddr))
+    if (!userInTable($adminEmailAddr)->num_rows)
     addEmailAddr($adminEmailAddr);
     $db->query("INSERT INTO Events_Users (eventId, emailAddr, isAdmin, isOwner) VALUES ($eventId, \"$adminEmailAddr\", 1, 0)");
   }
   foreach ($participantList as $participantEmailAddr) {
-    if (!userInTable($participantEmailAddr))
+    if (!userInTable($participantEmailAddr)->num_rows)
     addEmailAddr($participantEmailAddr);
     $db->query("INSERT INTO Events_Users (eventId, emailAddr, isAdmin, isOwner) VALUES ($eventId, \"$participantEmailAddr\", 0, 0)");
   }
@@ -278,18 +278,30 @@ function editUser() {
   return json_encode("updated user");
 }
 
-// todo: make it event-specific instead of including all sessions from every event for the user
 function getUserEventSessions() {
+  $db = $GLOBALS['db'];
   $emailAddr = json_decode($_POST['emailAddr']);
   $eventId = json_decode($_POST['eventId']);
-  $query = "SELECT DISTINCT groups_sessions.sessionId FROM groups_sessions INNER JOIN groups_users ON groups_sessions.groupId=groups_users.groupId WHERE groups_users.emailAddr='$emailAddr'";
-  // $groupIdsQuery = "SELECT groupId FROM Groups_Users WHERE emailAddr='$emailAddr'";
-  $result = $GLOBALS['db']->query($query);
+
   $all_results = [];
-  for ($i = 0; $i < $result->num_rows; $i ++) {
+  
+  $result = $db->query("SELECT DISTINCT groups_sessions.sessionId FROM ((groups_sessions
+  INNER JOIN groups_users ON groups_sessions.groupId=groups_users.groupId)
+  INNER JOIN groups ON groups_sessions.groupId=groups.id)
+  WHERE groups_users.emailAddr='$emailAddr'
+  AND groups.eventId=$eventId;");
+  for ($i = 0; $i < $result->num_rows; $i++) {
     $sessionId = (int) $result->fetch_object()->sessionId;
     array_push($all_results, $sessionId);
   }
+
+  // todo: also get all sessions from that event with the boolean 'everyone'
+  $result = $db->query("SELECT id FROM Sessions WHERE eventId=$eventId AND everyone=1");
+  for ($i = 0; $i < $result->num_rows; $i++) {
+    $sessionId = (int) $result->fetch_object()->id;
+    array_push($all_results, $sessionId);
+  }
+
   return json_encode($all_results);
 }
 
@@ -302,13 +314,16 @@ function addSession() {
   $endTime = json_decode($_POST['endTime']);
   $link = json_decode($_POST['link']);
   $location = json_decode($_POST['location']);
-  $groups = json_decode($_POST['groups']);
+  $everyone = json_decode($_POST['everyone']);
 
-  $db->query("INSERT INTO Sessions (eventId, title, description, startTime, endTime, link, location) VALUES ($eventId, \"$title\", \"$desc\", \"$startTime\", \"$endTime\", \"$link\", \"$location\");");
+  $db->query("INSERT INTO Sessions (eventId, title, description, startTime, endTime, link, location, everyone) VALUES ($eventId, \"$title\", \"$desc\", \"$startTime\", \"$endTime\", \"$link\", \"$location\", $everyone);");
   $sessionId = $db->insert_id;
-
-  foreach ($groups as $groupId) {
-    $db->query("INSERT INTO Groups_Sessions (groupId, sessionId) VALUES ($groupId, $sessionId);");
+  
+  if (!$everyone) {
+    $groups = json_decode($_POST['groups']);
+    foreach ($groups as $groupId) {
+      $db->query("INSERT INTO Groups_Sessions (groupId, sessionId) VALUES ($groupId, $sessionId);");
+    }
   }
 
   return json_encode("session added");
