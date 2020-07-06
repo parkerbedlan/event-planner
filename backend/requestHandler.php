@@ -213,19 +213,6 @@ function getUserParticipantEventIds() {
   return json_encode($all_results);
 }
 
-function getUserEventSessions() {
-  $emailAddr = json_decode($_POST['emailAddr']);
-  $query = "SELECT DISTINCT groups_sessions.sessionId FROM groups_sessions INNER JOIN groups_users ON groups_sessions.groupId=groups_users.groupId WHERE groups_users.emailAddr='$emailAddr'";
-  // $groupIdsQuery = "SELECT groupId FROM Groups_Users WHERE emailAddr='$emailAddr'";
-  $result = $GLOBALS['db']->query($query);
-  $all_results = [];
-  for ($i = 0; $i < $result->num_rows; $i ++) {
-    $sessionId = (int) $result->fetch_object()->sessionId;
-    array_push($all_results, $sessionId);
-  }
-  return json_encode($all_results);
-}
-
 function getCache() {
   $emailAddr = json_decode($_POST['emailAddr']);
   return file_get_contents("cache/$emailAddr.json");
@@ -254,23 +241,23 @@ function addEvent() {
   $groupList = json_decode($_POST['groupList']);
   $adminList = json_decode($_POST['adminList']);
   $participantList = json_decode($_POST['participantList']);
-
+  
   $db->query("INSERT INTO Events (title, shortTitle) VALUES (\"$title\", \"$shortTitle\");");
   $eventId = $db->insert_id;
   foreach ($groupList as $groupTitle) {
     $db->query("INSERT INTO Groups (eventId, title) VALUES ($eventId,\"$groupTitle\");");
   }
-
+  
   $db->query("INSERT INTO Events_Users (eventId, emailAddr, isAdmin, isOwner) VALUES ($eventId, \"$owner\", 1, 1)");
-
+  
   foreach ($adminList as $adminEmailAddr) {
     if (!userInTable($adminEmailAddr))
-      addEmailAddr($adminEmailAddr);
+    addEmailAddr($adminEmailAddr);
     $db->query("INSERT INTO Events_Users (eventId, emailAddr, isAdmin, isOwner) VALUES ($eventId, \"$adminEmailAddr\", 1, 0)");
   }
   foreach ($participantList as $participantEmailAddr) {
     if (!userInTable($participantEmailAddr))
-      addEmailAddr($participantEmailAddr);
+    addEmailAddr($participantEmailAddr);
     $db->query("INSERT INTO Events_Users (eventId, emailAddr, isAdmin, isOwner) VALUES ($eventId, \"$participantEmailAddr\", 0, 0)");
   }
   return json_encode("added event to database");
@@ -282,11 +269,47 @@ function editUser() {
   $firstName = $_POST['firstName'];
   $lastName = $_POST['lastName'];
   updateUser($emailAddr, $firstName, $lastName);
-
+  
   if (count($_FILES)) {
     $profilePicture = file_get_contents($_FILES['profilePicture']['tmp_name']);
     fwrite(fopen("profilePictures/$emailAddr.png","wb"),$profilePicture);
   }
-
+  
   return json_encode("updated user");
+}
+
+// todo: make it event-specific instead of including all sessions from every event for the user
+function getUserEventSessions() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $eventId = json_decode($_POST['eventId']);
+  $query = "SELECT DISTINCT groups_sessions.sessionId FROM groups_sessions INNER JOIN groups_users ON groups_sessions.groupId=groups_users.groupId WHERE groups_users.emailAddr='$emailAddr'";
+  // $groupIdsQuery = "SELECT groupId FROM Groups_Users WHERE emailAddr='$emailAddr'";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $sessionId = (int) $result->fetch_object()->sessionId;
+    array_push($all_results, $sessionId);
+  }
+  return json_encode($all_results);
+}
+
+function addSession() {
+  $db = $GLOBALS['db'];
+  $eventId = json_decode($_POST['eventId']);
+  $title = json_decode($_POST['title']);
+  $desc = json_decode($_POST['desc']);
+  $startTime = json_decode($_POST['startTime']);
+  $endTime = json_decode($_POST['endTime']);
+  $link = json_decode($_POST['link']);
+  $location = json_decode($_POST['location']);
+  $groups = json_decode($_POST['groups']);
+
+  $db->query("INSERT INTO Sessions (eventId, title, description, startTime, endTime, link, location) VALUES ($eventId, \"$title\", \"$desc\", \"$startTime\", \"$endTime\", \"$link\", \"$location\");");
+  $sessionId = $db->insert_id;
+
+  foreach ($groups as $groupId) {
+    $db->query("INSERT INTO Groups_Sessions (groupId, sessionId) VALUES ($groupId, $sessionId);");
+  }
+
+  return json_encode("session added");
 }

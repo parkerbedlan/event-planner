@@ -322,7 +322,7 @@ function CreateEventCard({ appUserEmail }) {
               }
             }}
           >
-            Save changes
+            Create Event
             {showSpinner && <Spinner animation="border" variant="light" />}
           </Button>
         </Modal.Footer>

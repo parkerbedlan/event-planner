@@ -36,9 +36,14 @@ export default class AppUser {
     })
     const participantEvents = {}
     for (const participantEventId of participantEventIds) {
-      participantEvents[
-        participantEventId
-      ] = await getPHP('getUserEventSessions', { emailAddr })
+      participantEvents[participantEventId] = {
+        id: participantEventId,
+        title: 'cool title',
+        schedule: await getPHP('getUserEventSessions', {
+          emailAddr,
+          eventId: participantEventId,
+        }),
+      }
     }
 
     return new AppUser(

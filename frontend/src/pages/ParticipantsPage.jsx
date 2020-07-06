@@ -21,7 +21,7 @@ export default function ParticipantsPage({ appUser }) {
         participant => (
           <h3 key={participant.emailAddr}>
             {participant.emailAddr}
-            {participant.firstName.length !== 0
+            {participant.firstName
               ? ' - ' + participant.firstName + ' ' + participant.lastName
               : ''}
           </h3>

@@ -33,11 +33,6 @@ export default function NavigationBar({ profilePic, adminEvents }) {
           <>
             {Boolean(adminEvents) && (
               <Nav className="mr-auto">
-                {/* <Nav.Link href="/">
-                  <h5>
-                    {adminEvents[cookies.get('currentEventId')].shortTitle}
-                  </h5>
-                </Nav.Link> */}
                 <EventDropdown adminEvents={adminEvents} />
               </Nav>
             )}

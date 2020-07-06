@@ -20,7 +20,7 @@ export default function AdminsPage({ appUser }) {
       {Object.values(appUser.adminEvents[currentEventId].admins).map(admin => (
         <h3 key={admin.emailAddr}>
           {admin.emailAddr}
-          {admin.firstName.length !== 0
+          {admin.firstName
             ? ' - ' + admin.firstName + ' ' + admin.lastName
             : ''}
         </h3>
