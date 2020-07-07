@@ -30,9 +30,9 @@ export default class Event {
     }
 
     const sessionIds = await getPHP('getEventSessionIds', { eventId })
-    let sessions = {}
+    let sessions = []
     for (const sessionId of sessionIds) {
-      sessions[sessionId] = await Session.fetch(sessionId)
+      sessions.push(await Session.fetch(sessionId))
     }
 
     const groupIds = await getPHP('getEventGroupIds', { eventId })

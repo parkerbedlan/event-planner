@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useContext } from 'react'
 import styled from 'styled-components'
-import { Button, Modal, Spinner, Form } from 'react-bootstrap'
+import { Button, Modal, Spinner, Form, Card, Col, Row } from 'react-bootstrap'
 import Cookies from 'universal-cookie'
 import { AppState, getAppData } from '../App'
 import { getPHP, sanitize } from '../phpHelper'
@@ -10,10 +10,6 @@ const cookies = new Cookies()
 const Styles = styled.div`
   * {
     margin-top: 1em;
-  }
-
-  h1 {
-    display: inline;
   }
 `
 
@@ -25,6 +21,11 @@ export default function SessionsPage({ appUser }) {
   const [showNew, setShowNew] = useState(false)
   // const [showDetails, setShowDetails] = useState({})
 
+  const [showPrevSessions, setShowPrevSessions] = useState(false)
+
+  let date = useRef('')
+  let month = useRef('')
+
   return (
     <Styles>
       {showNew && (
@@ -35,7 +36,9 @@ export default function SessionsPage({ appUser }) {
         />
       )}
 
-      <h1 className="m-3">Sessions</h1>
+      <h1 className="m-3" style={{ display: 'inline' }}>
+        Sessions
+      </h1>
       <Button
         onClick={() => setShowNew(true)}
         variant="secondary"
@@ -43,12 +46,63 @@ export default function SessionsPage({ appUser }) {
       >
         Create New Session
       </Button>
-      {Object.values(event.sessions).map(session => (
-        <h3 key={session.id}>
-          {session.startTime.substring(0, 10) + ' - '}
-          <strong>{session.title}</strong>
-        </h3>
-      ))}
+      <Form.Switch
+        id="prevSwitch"
+        checked={showPrevSessions}
+        onChange={e => setShowPrevSessions(e.target.checked)}
+        label="Show Previous Sessions"
+      />
+
+      {event.sessions.map(session => {
+        const showSession =
+          showPrevSessions || new Date(session.startTime) >= new Date()
+
+        let monthHeader = getMonth(session.startTime)
+        if (month === monthHeader || !showSession) monthHeader = ''
+        else month = monthHeader
+
+        let dateHeader = getDate(session.startTime)
+        if (date === dateHeader || !showSession) dateHeader = ''
+        else date = dateHeader
+
+        return (
+          <React.Fragment key={session.id}>
+            {Boolean(showSession) && (
+              <>
+                {Boolean(monthHeader) && (
+                  <>
+                    <h1>{monthHeader}</h1>
+                    <hr />
+                  </>
+                )}
+                {Boolean(dateHeader) && <h2>{dateHeader}</h2>}
+                <Card>
+                  <Row className="m-0">
+                    <Col>
+                      <strong>{session.title}</strong>
+                      <br />
+                      {session.startTime.substring(11, 16) +
+                        ' - ' +
+                        session.endTime.substring(11, 16)}
+                    </Col>
+                    <Col>
+                      <Button variant="secondary" className="m-2">
+                        Details
+                      </Button>
+                      <Button variant="info" className="m-2">
+                        Edit
+                      </Button>
+                      <Button variant="danger" className="m-2">
+                        Delete
+                      </Button>
+                    </Col>
+                  </Row>
+                </Card>
+              </>
+            )}
+          </React.Fragment>
+        )
+      })}
     </Styles>
   )
 }
@@ -58,10 +112,10 @@ function NewSessionModal({ setShow, event, appUserEmail }) {
   const [showSpinner, setShowSpinner] = useState(false)
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
-  const [startDate, setStartDate] = useState(null)
-  const [startTime, setStartTime] = useState(null)
-  const [endDate, setEndDate] = useState(null)
-  const [endTime, setEndTime] = useState(null)
+  const [startDate, setStartDate] = useState('')
+  const [startTime, setStartTime] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [endTime, setEndTime] = useState('')
   const [everyone, setEveryone] = useState(true)
   const [groups, setGroups] = useState([])
   const [link, setLink] = useState('')
@@ -84,8 +138,8 @@ function NewSessionModal({ setShow, event, appUserEmail }) {
         <h4>Create New Session</h4>
       </Modal.Header>
       <Form className="m-3">
-        <h2>What</h2>
         <Form.Group>
+          <h2>What</h2>
           <Form.Control
             ref={titleField}
             value={title}
@@ -101,8 +155,8 @@ function NewSessionModal({ setShow, event, appUserEmail }) {
             as="textarea"
           />
         </Form.Group>
-        <h2>When</h2>
         <Form.Group>
+          <h2>When</h2>
           <Form.Label className="mr-2">Start Time</Form.Label>
           <Form.Control
             type="date"
@@ -139,42 +193,52 @@ function NewSessionModal({ setShow, event, appUserEmail }) {
             style={{ display: 'inline', width: '15rem' }}
           />
         </Form.Group>
-        <h2>Who</h2>
-        <Form.Group>
-          <Form.Check
-            checked={everyone}
-            onClick={() => setEveryone(true)}
-            name="everyoneRadio"
-            label={<strong>Everyone</strong>}
-            type="radio"
-          />
-          <Form.Check
-            checked={!everyone}
-            onClick={() => setEveryone(false)}
-            name="everyoneRadio"
-            label={<strong>Specific Groups...</strong>}
-            type="radio"
-          />
-          {!everyone && (
-            <>
-              <Form.Check label="Check All Groups" type="checkbox" />
-              {Object.values(event.groups).map(group => (
+        {hasGroup(event) && (
+          <Form.Group>
+            <h2>Who</h2>
+            <Form.Check
+              checked={everyone}
+              onChange={() => setEveryone(true)}
+              name="everyoneRadio"
+              label={<strong>Everyone</strong>}
+              type="radio"
+            />
+            <Form.Check
+              checked={!everyone}
+              onChange={() => setEveryone(false)}
+              name="everyoneRadio"
+              label={<strong>Specific Groups...</strong>}
+              type="radio"
+            />
+            {!everyone && (
+              <>
                 <Form.Check
-                  checked={groups.includes(group.id)}
-                  onClick={e => {
-                    if (e.target.checked) setGroups([...groups, group.id])
-                    else setGroups(groups.filter(g => g !== group.id))
+                  onChange={e => {
+                    if (e.target.checked)
+                      setGroups(Object.keys(event.groups).map(id => Number(id)))
+                    else setGroups([])
                   }}
-                  key={group.id}
-                  label={group.title}
+                  label="Check All Groups"
                   type="checkbox"
                 />
-              ))}
-            </>
-          )}
-        </Form.Group>
-        <h2>Where</h2>
+                {Object.values(event.groups).map(group => (
+                  <Form.Check
+                    checked={groups.includes(group.id)}
+                    onChange={e => {
+                      if (e.target.checked) setGroups([...groups, group.id])
+                      else setGroups(groups.filter(g => g !== group.id))
+                    }}
+                    key={group.id}
+                    label={group.title}
+                    type="checkbox"
+                  />
+                ))}
+              </>
+            )}
+          </Form.Group>
+        )}
         <Form.Group>
+          <h2>Where</h2>
           <Form.Control
             value={link}
             onChange={e => setLink(e.target.value)}
@@ -235,6 +299,18 @@ function NewSessionModal({ setShow, event, appUserEmail }) {
     </Modal>
   )
 }
+
+const hasGroup = event => {
+  for (const key in event.groups) return true
+  return false
+}
+
+const getMonth = timestamp =>
+  new Date(timestamp).toLocaleDateString('en', {
+    year: 'numeric',
+    month: 'long',
+  })
+const getDate = timestamp => new Date(timestamp).toDateString().substring(0, 10)
 
 // function DetailsSessionModal({ setShow, session }) {}
 // function EditSessionModal({ setShow, session }) {}

@@ -89,7 +89,7 @@ function getParticipants() {
 
 function getEventSessionIds() {
   $eventId = $_POST['eventId'];
-  $query = "SELECT id FROM Sessions WHERE eventId=$eventId";
+  $query = "SELECT id FROM Sessions WHERE eventId=$eventId ORDER BY startTime";
   $result = $GLOBALS['db']->query($query);
   $all_results = [];
   for ($i = 0; $i < $result->num_rows; $i ++) {
@@ -113,7 +113,7 @@ function getEventGroupIds() {
 
 function getSessionData() {
   $sessionId = $_POST['sessionId'];
-  $query = "SELECT id, eventId, title, description, startTime, endTime, link, location FROM Sessions WHERE id=$sessionId";
+  $query = "SELECT id, eventId, title, description, startTime, endTime, link, location, everyone FROM Sessions WHERE id=$sessionId";
   $output = json_encode($GLOBALS['db']->query($query)->fetch_object());
   return $output;
 }

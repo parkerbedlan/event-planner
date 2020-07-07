@@ -10,6 +10,7 @@ export default class Session {
     endTime,
     link,
     location,
+    everyone,
     groupIds
   ) {
     this.id = id
@@ -20,6 +21,7 @@ export default class Session {
     this.endTime = endTime
     this.link = link
     this.location = location
+    this.everyone = everyone
     this.groupIds = groupIds
   }
 
@@ -36,6 +38,7 @@ export default class Session {
       sessionData.endTime,
       sessionData.link,
       sessionData.location,
+      Boolean(sessionData.everyone),
       groupIds
     )
   }
