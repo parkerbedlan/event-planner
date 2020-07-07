@@ -19,9 +19,12 @@ export default function SessionsPage({ appUser }) {
   const event = appUser.adminEvents[currentEventId]
 
   const [showNew, setShowNew] = useState(false)
-  // const [showDetails, setShowDetails] = useState({})
+
+  const [showDetails, setShowDetails] = useState([])
 
   const [showPrevSessions, setShowPrevSessions] = useState(false)
+
+  const { state, setState } = useContext(AppState)
 
   let date = useRef('')
   let month = useRef('')
@@ -30,7 +33,7 @@ export default function SessionsPage({ appUser }) {
     <Styles>
       {showNew && (
         <NewSessionModal
-          setShow={setShowNew}
+          onHide={() => setShowNew(false)}
           event={event}
           appUserEmail={appUser.emailAddr}
         />
@@ -86,19 +89,50 @@ export default function SessionsPage({ appUser }) {
                         session.endTime.substring(11, 16)}
                     </Col>
                     <Col>
-                      <Button variant="secondary" className="m-2">
+                      <Button
+                        onClick={() =>
+                          setShowDetails([...showDetails, session.id])
+                        }
+                        variant="secondary"
+                        className="m-2"
+                      >
                         Details
                       </Button>
                       <Button variant="info" className="m-2">
                         Edit
                       </Button>
-                      <Button variant="danger" className="m-2">
+                      <Button
+                        onClick={async () => {
+                          if (
+                            window.confirm(
+                              `Are you sure you want to delete ${session.title}?`
+                            )
+                          ) {
+                            setState({ ...state, updated: false })
+                            await getPHP('removeSession', {
+                              sessionId: session.id,
+                            })
+                            await getAppData(appUser.emailAddr, setState)
+                          }
+                        }}
+                        variant="danger"
+                        className="m-2"
+                      >
                         Delete
                       </Button>
                     </Col>
                   </Row>
                 </Card>
               </>
+            )}
+            {Boolean(showDetails.includes(session.id)) && (
+              <DetailsSessionModal
+                session={session}
+                event={event}
+                onHide={() =>
+                  setShowDetails(showDetails.filter(s => s !== session.id))
+                }
+              />
             )}
           </React.Fragment>
         )
@@ -107,7 +141,7 @@ export default function SessionsPage({ appUser }) {
   )
 }
 
-function NewSessionModal({ setShow, event, appUserEmail }) {
+function NewSessionModal({ onHide, event, appUserEmail }) {
   const titleField = useRef(null)
   const [showSpinner, setShowSpinner] = useState(false)
   const [title, setTitle] = useState('')
@@ -128,12 +162,7 @@ function NewSessionModal({ setShow, event, appUserEmail }) {
   }, [titleField])
 
   return (
-    <Modal
-      show={true}
-      onHide={() => setShow(false)}
-      backdrop="static"
-      size="lg"
-    >
+    <Modal show={true} onHide={onHide} backdrop="static" size="lg">
       <Modal.Header closeButton>
         <h4>Create New Session</h4>
       </Modal.Header>
@@ -255,7 +284,7 @@ function NewSessionModal({ setShow, event, appUserEmail }) {
         </Form.Group>
       </Form>
       <Modal.Footer>
-        <Button onClick={() => setShow(false)} variant="secondary">
+        <Button onClick={onHide} variant="secondary">
           Cancel
         </Button>
         <Button
@@ -288,7 +317,7 @@ function NewSessionModal({ setShow, event, appUserEmail }) {
                 everyone,
               })
               await getAppData(appUserEmail, setState)
-              setShow(false)
+              onHide()
             }
           }}
         >
@@ -296,6 +325,61 @@ function NewSessionModal({ setShow, event, appUserEmail }) {
           {showSpinner && <Spinner animation="border" variant="light" />}
         </Button>
       </Modal.Footer>
+    </Modal>
+  )
+}
+
+function DetailsSessionModal({ onHide, session, event }) {
+  return (
+    <Modal show={true} onHide={onHide} size="lg">
+      <Modal.Header closeButton>
+        <h4>{session.title}</h4>
+      </Modal.Header>
+      <div className="m-3">
+        <p>
+          <strong>Title: </strong>
+          {session.title}
+        </p>
+        <p>
+          <strong>Description: </strong>
+          {session.description || 'None'}
+        </p>
+        <p>
+          <strong>Start Time: </strong>
+          {getString(session.startTime)}
+        </p>
+        <p>
+          <strong>End Time: </strong>
+          {getString(session.endTime)}
+        </p>
+        <p>
+          <strong>Link: </strong>
+          {session.link || 'None'}
+        </p>
+        <p>
+          <strong>Location: </strong>
+          {session.location || 'None'}
+        </p>
+        <p>
+          <strong>Attendees: </strong>
+          {session.everyone
+            ? 'Everyone'
+            : session.groupIds.map(id => event.groups[id].title).join(', ')}
+        </p>
+        <p>
+          <strong>Number of Attendees: </strong>
+          {session.everyone
+            ? Object.keys(event.admins).length +
+              Object.keys(event.participants).length
+            : session.groupIds.reduce(
+                (a, b) =>
+                  a +
+                  event.groups[b].leaderEmails.length +
+                  event.groups[b].memberEmails.length,
+                0
+              )}
+        </p>
+      </div>
     </Modal>
   )
 }
@@ -310,8 +394,11 @@ const getMonth = timestamp =>
     year: 'numeric',
     month: 'long',
   })
-const getDate = timestamp => new Date(timestamp).toDateString().substring(0, 10)
 
-// function DetailsSessionModal({ setShow, session }) {}
+const getDate = timestamp =>
+  new Date(timestamp).toDateString().substring(0, 10).replace(' 0', ' ')
+
+const getString = timestamp => new Date(timestamp).toLocaleString()
+
 // function EditSessionModal({ setShow, session }) {}
 // function DeleteSessionModal({ setShow, session }) {}

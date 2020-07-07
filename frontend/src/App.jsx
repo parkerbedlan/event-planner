@@ -117,6 +117,7 @@ function App() {
                 <Route component={NoMatchPage} />
               </Switch>
             </Router>
+            <br />
           </>
         )}
         {/* <img id="image1" alt="profile pic" /> */}

@@ -38,7 +38,7 @@ export default class Session {
       sessionData.endTime,
       sessionData.link,
       sessionData.location,
-      Boolean(sessionData.everyone),
+      Boolean(Number(sessionData.everyone)),
       groupIds
     )
   }

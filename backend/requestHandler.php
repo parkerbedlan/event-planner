@@ -314,7 +314,7 @@ function addSession() {
   $endTime = json_decode($_POST['endTime']);
   $link = json_decode($_POST['link']);
   $location = json_decode($_POST['location']);
-  $everyone = json_decode($_POST['everyone']);
+  $everyone = (int)json_decode($_POST['everyone']);
 
   $db->query("INSERT INTO Sessions (eventId, title, description, startTime, endTime, link, location, everyone) VALUES ($eventId, \"$title\", \"$desc\", \"$startTime\", \"$endTime\", \"$link\", \"$location\", $everyone);");
   $sessionId = $db->insert_id;
@@ -327,4 +327,10 @@ function addSession() {
   }
 
   return json_encode("session added");
+}
+
+function removeSession() {
+  $sessionId = json_decode($_POST['sessionId']);
+  $GLOBALS['db']->query("DELETE FROM Sessions WHERE id=$sessionId");
+  return json_encode("session removed");
 }

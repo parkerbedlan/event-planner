@@ -55,6 +55,9 @@ export default function NavigationBar({ profilePic, adminEvents, updated }) {
                 <Nav.Link href="/participants">
                   <h5>Participants</h5>
                 </Nav.Link>
+                <Nav.Link disabled href="/groups">
+                  <h5>Groups</h5>
+                </Nav.Link>
                 <Nav.Link disabled href="/notifications">
                   <h5>Notifications</h5>
                 </Nav.Link>
