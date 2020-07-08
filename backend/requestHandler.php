@@ -309,14 +309,14 @@ function addSession() {
   $db = $GLOBALS['db'];
   $eventId = json_decode($_POST['eventId']);
   $title = json_decode($_POST['title']);
-  $desc = json_decode($_POST['desc']);
+  $description = json_decode($_POST['description']);
   $startTime = json_decode($_POST['startTime']);
   $endTime = json_decode($_POST['endTime']);
   $link = json_decode($_POST['link']);
   $location = json_decode($_POST['location']);
   $everyone = (int)json_decode($_POST['everyone']);
 
-  $db->query("INSERT INTO Sessions (eventId, title, description, startTime, endTime, link, location, everyone) VALUES ($eventId, \"$title\", \"$desc\", \"$startTime\", \"$endTime\", \"$link\", \"$location\", $everyone);");
+  $db->query("INSERT INTO Sessions (eventId, title, description, startTime, endTime, link, location, everyone) VALUES ($eventId, \"$title\", \"$description\", \"$startTime\", \"$endTime\", \"$link\", \"$location\", $everyone);");
   $sessionId = $db->insert_id;
   
   if (!$everyone) {
@@ -333,4 +333,21 @@ function removeSession() {
   $sessionId = json_decode($_POST['sessionId']);
   $GLOBALS['db']->query("DELETE FROM Sessions WHERE id=$sessionId");
   return json_encode("session removed");
+}
+
+function editSession() {
+  $db = $GLOBALS['db'];
+  // $eventId = json_decode($_POST['eventId']);
+  $sessionId = (int)json_decode($_POST['sessionId']);
+  $title = json_decode($_POST['title']);
+  $description = json_decode($_POST['description']);
+  $startTime = json_decode($_POST['startTime']);
+  $endTime = json_decode($_POST['endTime']);
+  $link = json_decode($_POST['link']);
+  $location = json_decode($_POST['location']);
+  $everyone = (int)json_decode($_POST['everyone']);
+
+  $db->query("UPDATE Sessions SET title=\"$title\", description=\"$description\", startTime=\"$startTime\", endTime=\"$endTime\", link=\"$link\", location=\"$location\", everyone=$everyone WHERE id=$sessionId");
+
+  return json_encode('not yet implemented');
 }

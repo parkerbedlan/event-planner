@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   Toast,
   Card,
@@ -11,7 +11,7 @@ import {
 import styled from 'styled-components'
 import Cookies from 'universal-cookie'
 import { getPHP, sanitize, isEmail } from '../phpHelper'
-import { getAppData, AppState } from '../App'
+import { getAppData } from '../App'
 
 const cookies = new Cookies()
 
@@ -122,7 +122,6 @@ function CreateEventCard({ appUserEmail }) {
   const [participantList, setParticipantList] = useState([])
   const [showSpinner, setShowSpinner] = useState(false)
   const titleField = useRef(null)
-  const { setState } = useContext(AppState)
 
   useEffect(() => {
     if (show && titleField) titleField.current.focus()
@@ -350,7 +349,7 @@ function CreateEventCard({ appUserEmail }) {
                   adminList,
                   participantList,
                 })
-                await getAppData(appUserEmail, setState)
+                await getAppData()
                 setShow(false)
                 clearAllFields()
               }

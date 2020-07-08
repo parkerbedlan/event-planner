@@ -25,7 +25,7 @@ const LoadingScreen = styled.div`
 let appUserEmailAddr
 let appState
 let appSetState
-export async function getAppData(emailAddr, setState) {
+export async function getAppData() {
   appSetState({ ...appState, updated: false })
   const appUser = await AppUser.fetch(appUserEmailAddr)
   await getPHP('setCache', {
@@ -80,7 +80,7 @@ function App() {
           updated: false,
           appUser: appUserCached,
         })
-        await getAppData(user.email, setState)
+        await getAppData()
       }
       f()
     }

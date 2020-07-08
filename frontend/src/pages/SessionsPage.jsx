@@ -1,8 +1,18 @@
-import React, { useState, useRef, useEffect, useContext } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import styled from 'styled-components'
-import { Button, Modal, Spinner, Form, Card, Col, Row } from 'react-bootstrap'
+import {
+  Button,
+  Modal,
+  Spinner,
+  Form as FormBS,
+  Card,
+  Col,
+  Row,
+  Alert,
+} from 'react-bootstrap'
+import { Formik, Field, Form, useField } from 'formik'
 import Cookies from 'universal-cookie'
-import { AppState, getAppData } from '../App'
+import { getAppData } from '../App'
 import { getPHP, sanitize } from '../phpHelper'
 
 const cookies = new Cookies()
@@ -19,7 +29,6 @@ export default function SessionsPage({ appUser }) {
   const event = appUser.adminEvents[currentEventId]
 
   const [showNew, setShowNew] = useState(false)
-
   const [showPrevSessions, setShowPrevSessions] = useState(false)
 
   let date = useRef('')
@@ -45,7 +54,7 @@ export default function SessionsPage({ appUser }) {
       >
         Create New Session
       </Button>
-      <Form.Switch
+      <FormBS.Switch
         id="prevSwitch"
         checked={showPrevSessions}
         onChange={e => setShowPrevSessions(e.target.checked)}
@@ -88,6 +97,7 @@ export default function SessionsPage({ appUser }) {
 
 function SessionCard({ session, event }) {
   const [showDetails, setShowDetails] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   return (
@@ -110,7 +120,11 @@ function SessionCard({ session, event }) {
               >
                 Details
               </Button>
-              <Button variant="info" className="m-2">
+              <Button
+                onClick={() => setShowEdit(true)}
+                variant="info"
+                className="m-2"
+              >
                 Edit
               </Button>
               <Button
@@ -142,6 +156,14 @@ function SessionCard({ session, event }) {
           session={session}
           event={event}
           onHide={() => setShowDetails(false)}
+        />
+      )}
+
+      {showEdit && (
+        <EditSessionModal
+          session={session}
+          event={event}
+          onHide={() => setShowEdit(false)}
         />
       )}
     </>
@@ -203,11 +225,223 @@ function DetailsSessionModal({ onHide, session, event }) {
   )
 }
 
+const FieldWithError = ({
+  placeholder,
+  style,
+  className,
+  type,
+  as,
+  ...props
+}) => {
+  const [field, { error, touched }] = useField(props)
+  return (
+    <FormBS.Group>
+      {placeholder && <strong>{placeholder}: </strong>}
+      <FormBS.Control
+        placeholder={placeholder}
+        style={style}
+        className={className}
+        as={as}
+        type={type}
+        {...field}
+      />
+      {error && touched && <Alert variant="danger">{error}</Alert>}
+    </FormBS.Group>
+  )
+}
+
+function EditSessionModal({ onHide, session, event }) {
+  return (
+    <Modal show={true} onHide={onHide} size="lg" backdrop="static">
+      <Modal.Header closeButton>
+        <h4>Edit: {session.title}</h4>
+      </Modal.Header>
+      <Formik
+        validateOnChange={true}
+        initialValues={{
+          title: session.title,
+          description: session.description,
+          startDate: session.startTime.substring(0, 10),
+          startTime: session.startTime.substring(11, 16),
+          endDate: session.endTime.substring(0, 10),
+          endTime: session.endTime.substring(11, 16),
+          everyone: session.everyone,
+          groups: session.groupIds.map(id => String(id)),
+          link: session.link,
+          location: session.location,
+        }}
+        validate={values => {
+          const errors = {}
+
+          if (!values.title.trim().length) errors.title = 'Title required.'
+          if (
+            !values.startDate ||
+            !values.startTime ||
+            !values.endDate ||
+            !values.endTime
+          )
+            errors.time = 'All time fields required.'
+          if (
+            new Date(`${values.startDate} ${values.startTime}`) -
+              new Date(`${values.endDate} ${values.endTime}`) >
+            0
+          )
+            errors.time =
+              "Your session's End Time needs to come after your Start Time."
+          if (!values.everyone && !values.groups.length)
+            errors.groups = 'Check who you want to attend the event.'
+
+          return errors
+        }}
+        onSubmit={async (values, { setSubmitting }) => {
+          setSubmitting(true)
+          await getPHP('editSession', {
+            // eventId: event.id,
+            sessionId: session.id,
+            title: sanitize(values.title),
+            description: sanitize(values.description),
+            startTime: `${values.startDate} ${values.startTime}`,
+            endTime: `${values.endDate} ${values.endTime}`,
+            link: sanitize(values.link),
+            location: sanitize(values.location),
+            groups: values.groups.map(id => Number(id)),
+            // eslint-disable-next-line
+            everyone: values.everyone == 'true',
+          })
+          await getAppData()
+          setSubmitting(false)
+          onHide()
+        }}
+      >
+        {({ values, errors, touched, isSubmitting, setFieldValue }) => {
+          return (
+            <Form className="m-3">
+              <h2>What</h2>
+              <FieldWithError name="title" placeholder="Title" />
+              <FieldWithError
+                name="description"
+                placeholder="Description (optional)"
+                as="textarea"
+              />
+
+              <h2>When</h2>
+              <FormBS.Group>
+                <strong>Start Time: </strong>
+                <Field
+                  name="startDate"
+                  type="date"
+                  style={{ width: '15rem' }}
+                  className="form-control d-inline"
+                />
+                <Field
+                  name="startTime"
+                  type="time"
+                  style={{ width: '15rem' }}
+                  className="form-control d-inline"
+                />
+              </FormBS.Group>
+              <FormBS.Group>
+                <strong>End Time: </strong>
+                <Field
+                  name="endDate"
+                  type="date"
+                  style={{ width: '15rem' }}
+                  className="form-control d-inline"
+                />
+                <Field
+                  name="endTime"
+                  type="time"
+                  style={{ width: '15rem' }}
+                  className="form-control d-inline"
+                />
+              </FormBS.Group>
+              {errors.time && <Alert variant="danger">{errors.time}</Alert>}
+
+              {hasGroup(event) && (
+                <FormBS.Group>
+                  <h2>Who</h2>
+                  <Field
+                    name="everyone"
+                    value="true"
+                    type="radio"
+                    as={FormBS.Check}
+                    label={<strong>Everyone</strong>}
+                    checked={values.everyone === 'true'}
+                  />
+                  <Field
+                    name="everyone"
+                    value="false"
+                    type="radio"
+                    as={FormBS.Check}
+                    label={<strong>Specific Groups...</strong>}
+                    checked={values.everyone !== 'true'}
+                  />
+                  {values.everyone !== 'true' && (
+                    <>
+                      <FormBS.Check
+                        label="Check All Groups"
+                        onChange={e => {
+                          setFieldValue(
+                            'groups',
+                            e.target.checked ? Object.keys(event.groups) : []
+                          )
+                        }}
+                      />
+                      {Object.values(event.groups).map(group => {
+                        return (
+                          <Field
+                            key={group.id}
+                            name="groups"
+                            type="checkbox"
+                            value={group.id}
+                            label={group.title}
+                            as={FormBS.Check}
+                            checked={values.groups.includes(String(group.id))}
+                          />
+                        )
+                      })}
+                    </>
+                  )}
+                  {errors.groups && touched.groups && (
+                    <Alert variant="danger">{errors.groups}</Alert>
+                  )}
+                </FormBS.Group>
+              )}
+
+              <h2>Where</h2>
+              <FieldWithError
+                name="link"
+                placeholder="Invite Link (optional)"
+              />
+              <FieldWithError
+                name="location"
+                placeholder="Physical Location (optional)"
+              />
+
+              <Modal.Footer>
+                <Button onClick={onHide} variant="secondary">
+                  Cancel
+                </Button>
+                <Button disabled={isSubmitting} type="submit">
+                  Save changes{' '}
+                  {isSubmitting && (
+                    <Spinner animation="border" variant="light" />
+                  )}
+                </Button>
+              </Modal.Footer>
+            </Form>
+          )
+        }}
+      </Formik>
+    </Modal>
+  )
+}
+
 function NewSessionModal({ onHide, event, appUserEmail }) {
   const titleField = useRef(null)
   const [showSpinner, setShowSpinner] = useState(false)
   const [title, setTitle] = useState('')
-  const [desc, setDesc] = useState('')
+  const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -216,8 +450,6 @@ function NewSessionModal({ onHide, event, appUserEmail }) {
   const [groups, setGroups] = useState([])
   const [link, setLink] = useState('')
   const [location, setLocation] = useState('')
-
-  const { setState } = useContext(AppState)
 
   useEffect(() => {
     if (titleField) titleField.current.focus()
@@ -228,28 +460,28 @@ function NewSessionModal({ onHide, event, appUserEmail }) {
       <Modal.Header closeButton>
         <h4>Create New Session</h4>
       </Modal.Header>
-      <Form className="m-3">
-        <Form.Group>
+      <FormBS className="m-3">
+        <FormBS.Group>
           <h2>What</h2>
-          <Form.Control
+          <FormBS.Control
             ref={titleField}
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="Session Title"
           />
-        </Form.Group>
-        <Form.Group>
-          <Form.Control
-            value={desc}
-            onChange={e => setDesc(e.target.value)}
+        </FormBS.Group>
+        <FormBS.Group>
+          <FormBS.Control
+            value={description}
+            onChange={e => setDescription(e.target.value)}
             placeholder="Description (optional)"
             as="textarea"
           />
-        </Form.Group>
-        <Form.Group>
+        </FormBS.Group>
+        <FormBS.Group>
           <h2>When</h2>
-          <Form.Label className="mr-2">Start Time</Form.Label>
-          <Form.Control
+          <FormBS.Label className="mr-2">Start Time</FormBS.Label>
+          <FormBS.Control
             type="date"
             value={startDate}
             onChange={e => {
@@ -258,7 +490,7 @@ function NewSessionModal({ onHide, event, appUserEmail }) {
             }}
             style={{ display: 'inline', width: '15rem' }}
           />
-          <Form.Control
+          <FormBS.Control
             type="time"
             value={startTime}
             onChange={e => {
@@ -268,33 +500,33 @@ function NewSessionModal({ onHide, event, appUserEmail }) {
             }}
             style={{ display: 'inline', width: '15rem' }}
           />
-        </Form.Group>
-        <Form.Group>
-          <Form.Label className="mr-2">End Time</Form.Label>
-          <Form.Control
+        </FormBS.Group>
+        <FormBS.Group>
+          <FormBS.Label className="mr-2">End Time</FormBS.Label>
+          <FormBS.Control
             type="date"
             value={endDate}
             onChange={e => setEndDate(e.target.value)}
             style={{ display: 'inline', width: '15rem' }}
           />
-          <Form.Control
+          <FormBS.Control
             type="time"
             value={endTime}
             onChange={e => setEndTime(e.target.value)}
             style={{ display: 'inline', width: '15rem' }}
           />
-        </Form.Group>
+        </FormBS.Group>
         {hasGroup(event) && (
-          <Form.Group>
+          <FormBS.Group>
             <h2>Who</h2>
-            <Form.Check
+            <FormBS.Check
               checked={everyone}
               onChange={() => setEveryone(true)}
               name="everyoneRadio"
               label={<strong>Everyone</strong>}
               type="radio"
             />
-            <Form.Check
+            <FormBS.Check
               checked={!everyone}
               onChange={() => setEveryone(false)}
               name="everyoneRadio"
@@ -303,7 +535,7 @@ function NewSessionModal({ onHide, event, appUserEmail }) {
             />
             {!everyone && (
               <>
-                <Form.Check
+                <FormBS.Check
                   onChange={e => {
                     if (e.target.checked)
                       setGroups(Object.keys(event.groups).map(id => Number(id)))
@@ -313,7 +545,7 @@ function NewSessionModal({ onHide, event, appUserEmail }) {
                   type="checkbox"
                 />
                 {Object.values(event.groups).map(group => (
-                  <Form.Check
+                  <FormBS.Check
                     checked={groups.includes(group.id)}
                     onChange={e => {
                       if (e.target.checked) setGroups([...groups, group.id])
@@ -326,25 +558,25 @@ function NewSessionModal({ onHide, event, appUserEmail }) {
                 ))}
               </>
             )}
-          </Form.Group>
+          </FormBS.Group>
         )}
-        <Form.Group>
+        <FormBS.Group>
           <h2>Where</h2>
-          <Form.Control
+          <FormBS.Control
             value={link}
             onChange={e => setLink(e.target.value)}
             type="url"
             placeholder="Invite Link (optional)"
           />
-        </Form.Group>
-        <Form.Group>
-          <Form.Control
+        </FormBS.Group>
+        <FormBS.Group>
+          <FormBS.Control
             value={location}
             onChange={e => setLocation(e.target.value)}
             placeholder="Physical Location (optional)"
           />
-        </Form.Group>
-      </Form>
+        </FormBS.Group>
+      </FormBS>
       <Modal.Footer>
         <Button onClick={onHide} variant="secondary">
           Cancel
@@ -370,7 +602,7 @@ function NewSessionModal({ onHide, event, appUserEmail }) {
               await getPHP('addSession', {
                 eventId: event.id,
                 title: sanitize(title),
-                desc: sanitize(desc),
+                description: sanitize(description),
                 startTime: `${startDate} ${startTime}`,
                 endTime: `${endDate} ${endTime}`,
                 link: sanitize(link),
@@ -378,7 +610,7 @@ function NewSessionModal({ onHide, event, appUserEmail }) {
                 groups: groups,
                 everyone,
               })
-              await getAppData(appUserEmail, setState)
+              await getAppData()
               onHide()
             }
           }}
@@ -406,6 +638,3 @@ const getDate = timestamp =>
   new Date(timestamp).toDateString().substring(0, 10).replace(' 0', ' ')
 
 const getString = timestamp => new Date(timestamp).toLocaleString()
-
-// function EditSessionModal({ setShow, session }) {}
-// function DeleteSessionModal({ setShow, session }) {}
