@@ -22,17 +22,20 @@ const LoadingScreen = styled.div`
   background: url(${require('./images/loading.gif')}) center center no-repeat;
 `
 
+let appUserEmailAddr
+let appState
+let appSetState
 export async function getAppData(emailAddr, setState) {
-  const appUser = await AppUser.fetch(emailAddr)
+  appSetState({ ...appState, updated: false })
+  const appUser = await AppUser.fetch(appUserEmailAddr)
   await getPHP('setCache', {
-    emailAddr: appUser.emailAddr,
+    emailAddr: appUserEmailAddr,
     jsonData: JSON.stringify(appUser),
   })
-  setState({
+  appSetState({
     isLoading: false,
     updated: true,
     appUser,
-    appUserProfilePic: appUser.profilePic,
   })
 }
 
@@ -42,31 +45,32 @@ function App() {
   const { isAuthLoading, user } = useContext(Auth0Context)
   const [state, setState] = useState({})
 
+  appState = state
+  appSetState = setState
+
   useEffect(() => {
     if (user && user.email_verified) {
+      appUserEmailAddr = user.email
+
       setState({ isLoading: true })
       async function f() {
         let appUserCached
         try {
-          appUserCached = await getPHP('getCache', {
-            emailAddr: user.email,
-          })
+          appUserCached = JSON.parse(
+            await getPHP('getCache', {
+              emailAddr: user.email,
+            })
+          )
         } catch {
           try {
-            const appUser = await getAppData(user)
-            setState({
-              isLoading: false,
-              updated: true,
-              appUser,
-              appUserProfilePic: appUser.profilePic,
-            })
+            await getAppData()
             return
           } catch {
             setState({ isLoading: false })
             return alert('Failed to connect to server :(')
           }
         }
-        const appUserProfilePic = await getPHP(
+        appUserCached.profilePic = await getPHP(
           'getProfilePic',
           { emailAddr: user.email },
           'blob'
@@ -74,8 +78,7 @@ function App() {
         setState({
           isLoading: false,
           updated: false,
-          appUser: JSON.parse(appUserCached),
-          appUserProfilePic,
+          appUser: appUserCached,
         })
         await getAppData(user.email, setState)
       }
@@ -95,11 +98,7 @@ function App() {
         {!isAuthLoading && user && !user.email_verified && <VerificationPage />}
         {!isAuthLoading && user && user.email_verified && state.appUser && (
           <>
-            <NavigationBar
-              profilePic={state.appUserProfilePic}
-              adminEvents={state.appUser.adminEvents}
-              updated={state.updated}
-            />
+            <NavigationBar updated={state.updated} appUser={state.appUser} />
             <Router>
               <Switch>
                 <Route exact path="/">

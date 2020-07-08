@@ -20,11 +20,7 @@ export default function SessionsPage({ appUser }) {
 
   const [showNew, setShowNew] = useState(false)
 
-  const [showDetails, setShowDetails] = useState([])
-
   const [showPrevSessions, setShowPrevSessions] = useState(false)
-
-  const { state, setState } = useContext(AppState)
 
   let date = useRef('')
   let month = useRef('')
@@ -79,65 +75,131 @@ export default function SessionsPage({ appUser }) {
                   </>
                 )}
                 {Boolean(dateHeader) && <h2>{dateHeader}</h2>}
-                <Card>
-                  <Row className="m-0">
-                    <Col>
-                      <strong>{session.title}</strong>
-                      <br />
-                      {session.startTime.substring(11, 16) +
-                        ' - ' +
-                        session.endTime.substring(11, 16)}
-                    </Col>
-                    <Col>
-                      <Button
-                        onClick={() =>
-                          setShowDetails([...showDetails, session.id])
-                        }
-                        variant="secondary"
-                        className="m-2"
-                      >
-                        Details
-                      </Button>
-                      <Button variant="info" className="m-2">
-                        Edit
-                      </Button>
-                      <Button
-                        onClick={async () => {
-                          if (
-                            window.confirm(
-                              `Are you sure you want to delete ${session.title}?`
-                            )
-                          ) {
-                            setState({ ...state, updated: false })
-                            await getPHP('removeSession', {
-                              sessionId: session.id,
-                            })
-                            await getAppData(appUser.emailAddr, setState)
-                          }
-                        }}
-                        variant="danger"
-                        className="m-2"
-                      >
-                        Delete
-                      </Button>
-                    </Col>
-                  </Row>
-                </Card>
+
+                <SessionCard session={session} event={event} />
               </>
-            )}
-            {Boolean(showDetails.includes(session.id)) && (
-              <DetailsSessionModal
-                session={session}
-                event={event}
-                onHide={() =>
-                  setShowDetails(showDetails.filter(s => s !== session.id))
-                }
-              />
             )}
           </React.Fragment>
         )
       })}
     </Styles>
+  )
+}
+
+function SessionCard({ session, event }) {
+  const [showDetails, setShowDetails] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  return (
+    <>
+      {!deleting && (
+        <Card>
+          <Row className="m-0">
+            <Col>
+              <strong>{session.title}</strong>
+              <br />
+              {session.startTime.substring(11, 16) +
+                ' - ' +
+                session.endTime.substring(11, 16)}
+            </Col>
+            <Col>
+              <Button
+                onClick={() => setShowDetails(true)}
+                variant="secondary"
+                className="m-2"
+              >
+                Details
+              </Button>
+              <Button variant="info" className="m-2">
+                Edit
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (
+                    window.confirm(
+                      `Are you sure you want to delete ${session.title}?`
+                    )
+                  ) {
+                    setDeleting(true)
+                    await getPHP('removeSession', {
+                      sessionId: session.id,
+                    })
+                    await getAppData()
+                  }
+                }}
+                variant="danger"
+                className="m-2"
+              >
+                Delete
+              </Button>
+            </Col>
+          </Row>
+        </Card>
+      )}
+
+      {showDetails && (
+        <DetailsSessionModal
+          session={session}
+          event={event}
+          onHide={() => setShowDetails(false)}
+        />
+      )}
+    </>
+  )
+}
+
+function DetailsSessionModal({ onHide, session, event }) {
+  return (
+    <Modal show={true} onHide={onHide} size="lg">
+      <Modal.Header closeButton>
+        <h4>{session.title}</h4>
+      </Modal.Header>
+      <div className="m-3">
+        <p>
+          <strong>Title: </strong>
+          {session.title}
+        </p>
+        <p>
+          <strong>Description: </strong>
+          {session.description || 'None'}
+        </p>
+        <p>
+          <strong>Start Time: </strong>
+          {getString(session.startTime)}
+        </p>
+        <p>
+          <strong>End Time: </strong>
+          {getString(session.endTime)}
+        </p>
+        <p>
+          <strong>Link: </strong>
+          {session.link || 'None'}
+        </p>
+        <p>
+          <strong>Location: </strong>
+          {session.location || 'None'}
+        </p>
+        <p>
+          <strong>Attendees: </strong>
+          {session.everyone
+            ? 'Everyone'
+            : session.groupIds.map(id => event.groups[id].title).join(', ')}
+        </p>
+        <p>
+          <strong>Number of Attendees: </strong>
+          {session.everyone
+            ? Object.keys(event.admins).length +
+              Object.keys(event.participants).length
+            : session.groupIds.reduce(
+                (a, b) =>
+                  a +
+                  event.groups[b].leaderEmails.length +
+                  event.groups[b].memberEmails.length,
+                0
+              )}
+        </p>
+      </div>
+    </Modal>
   )
 }
 
@@ -325,61 +387,6 @@ function NewSessionModal({ onHide, event, appUserEmail }) {
           {showSpinner && <Spinner animation="border" variant="light" />}
         </Button>
       </Modal.Footer>
-    </Modal>
-  )
-}
-
-function DetailsSessionModal({ onHide, session, event }) {
-  return (
-    <Modal show={true} onHide={onHide} size="lg">
-      <Modal.Header closeButton>
-        <h4>{session.title}</h4>
-      </Modal.Header>
-      <div className="m-3">
-        <p>
-          <strong>Title: </strong>
-          {session.title}
-        </p>
-        <p>
-          <strong>Description: </strong>
-          {session.description || 'None'}
-        </p>
-        <p>
-          <strong>Start Time: </strong>
-          {getString(session.startTime)}
-        </p>
-        <p>
-          <strong>End Time: </strong>
-          {getString(session.endTime)}
-        </p>
-        <p>
-          <strong>Link: </strong>
-          {session.link || 'None'}
-        </p>
-        <p>
-          <strong>Location: </strong>
-          {session.location || 'None'}
-        </p>
-        <p>
-          <strong>Attendees: </strong>
-          {session.everyone
-            ? 'Everyone'
-            : session.groupIds.map(id => event.groups[id].title).join(', ')}
-        </p>
-        <p>
-          <strong>Number of Attendees: </strong>
-          {session.everyone
-            ? Object.keys(event.admins).length +
-              Object.keys(event.participants).length
-            : session.groupIds.reduce(
-                (a, b) =>
-                  a +
-                  event.groups[b].leaderEmails.length +
-                  event.groups[b].memberEmails.length,
-                0
-              )}
-        </p>
-      </div>
     </Modal>
   )
 }

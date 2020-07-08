@@ -12,11 +12,11 @@ import {
 import { blobToUrl, getPHP, sanitize, resizeImage } from '../phpHelper'
 import { Auth0Context } from '../contexts/auth0-context'
 import Cookies from 'universal-cookie'
-import { AppState, getAppData } from '../App'
+import { getAppData } from '../App'
 
 const cookies = new Cookies()
 
-export default function NavigationBar({ profilePic, adminEvents, updated }) {
+export default function NavigationBar({ updated, appUser }) {
   return (
     <>
       <Navbar fixed="top" bg="dark" variant="dark" expand="lg">
@@ -35,9 +35,9 @@ export default function NavigationBar({ profilePic, adminEvents, updated }) {
 
         {Boolean(window.location.pathname !== '/') ? (
           <>
-            {Boolean(adminEvents) && (
+            {Boolean(appUser.adminEvents) && (
               <Nav className="mr-auto">
-                <EventDropdown adminEvents={adminEvents} />
+                <EventDropdown adminEvents={appUser.adminEvents} />
               </Nav>
             )}
             <Navbar.Toggle aria-controls="basic-navbar-nav" />
@@ -61,13 +61,13 @@ export default function NavigationBar({ profilePic, adminEvents, updated }) {
                 <Nav.Link disabled href="/notifications">
                   <h5>Notifications</h5>
                 </Nav.Link>
-                <ProfileDropdown profilePic={profilePic} />
+                <ProfileDropdown appUser={appUser} />
               </Nav>
             </Navbar.Collapse>
           </>
         ) : (
           <Nav className="ml-auto">
-            <ProfileDropdown profilePic={profilePic} className="ml-auto" />
+            <ProfileDropdown appUser={appUser} className="ml-auto" />
           </Nav>
         )}
       </Navbar>
@@ -103,7 +103,7 @@ function EventDropdown({ adminEvents }) {
   )
 }
 
-function ProfileDropdown({ profilePic }) {
+function ProfileDropdown({ appUser }) {
   const { logout } = useContext(Auth0Context)
   const [show, setShow] = useState(false)
   return (
@@ -112,8 +112,8 @@ function ProfileDropdown({ profilePic }) {
         title={
           <Image
             src={
-              Boolean(profilePic)
-                ? blobToUrl(profilePic)
+              Boolean(appUser.profilePic)
+                ? blobToUrl(appUser.profilePic)
                 : require('../images/profilePlaceholder.png')
             }
             width="30"
@@ -137,17 +137,16 @@ function ProfileDropdown({ profilePic }) {
         </NavDropdown.Item>
       </NavDropdown>
 
-      <EditProfileModal show={show} setShow={setShow} />
+      <EditProfileModal show={show} setShow={setShow} appUser={appUser} />
     </>
   )
 }
 
-function EditProfileModal({ show, setShow }) {
+function EditProfileModal({ show, setShow, appUser }) {
   const firstNameField = useRef(null)
-  const { state, setState } = useContext(AppState)
-  const [firstName, setFirstName] = useState(state.appUser.firstName)
-  const [lastName, setLastName] = useState(state.appUser.lastName)
-  const [profilePic, setProfilePic] = useState(state.appUserProfilePic)
+  const [firstName, setFirstName] = useState(appUser.firstName)
+  const [lastName, setLastName] = useState(appUser.lastName)
+  const [profilePic, setProfilePic] = useState(appUser.profilePic)
   const [picChanged, setPicChanged] = useState(false)
   const [showSpinner, setShowSpinner] = useState(false)
 
@@ -156,9 +155,9 @@ function EditProfileModal({ show, setShow }) {
   }, [show, firstNameField])
 
   const clearAllFields = () => {
-    setFirstName(state.appUser.firstName)
-    setLastName(state.appUser.lastName)
-    setProfilePic(state.appUserProfilePic)
+    setFirstName(appUser.firstName)
+    setLastName(appUser.lastName)
+    setProfilePic(appUser.profilePic)
     setShowSpinner(false)
     setPicChanged(false)
   }
@@ -197,7 +196,6 @@ function EditProfileModal({ show, setShow }) {
             type="file"
             onChange={async e => {
               setPicChanged(true)
-              // setProfilePic(e.target.files[0])
               setProfilePic(
                 await resizeImage({ file: e.target.files[0], maxSize: 120 })
               )
@@ -235,7 +233,7 @@ function EditProfileModal({ show, setShow }) {
               await getPHP(
                 'editUser',
                 {
-                  emailAddr: state.appUser.emailAddr,
+                  emailAddr: appUser.emailAddr,
                   firstName: sanitize(firstName),
                   lastName: sanitize(lastName),
                   profilePicture: picChanged ? profilePic : null,
@@ -243,7 +241,7 @@ function EditProfileModal({ show, setShow }) {
                 'json',
                 'raw'
               )
-              await getAppData(state.appUser.emailAddr, setState)
+              await getAppData()
               setShow(false)
               setShowSpinner(false)
               setPicChanged(false)
