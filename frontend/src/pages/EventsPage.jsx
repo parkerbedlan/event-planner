@@ -4,7 +4,7 @@ import {
   Card,
   Modal,
   Button,
-  Form,
+  Form as FormBS,
   ListGroup,
   Spinner,
 } from 'react-bootstrap'
@@ -12,6 +12,9 @@ import styled from 'styled-components'
 import Cookies from 'universal-cookie'
 import { getPHP, sanitize, isEmail } from '../phpHelper'
 import { getAppData } from '../App'
+import { Formik, Form } from 'formik'
+import { FieldWithError } from '../components/FieldWithError'
+import * as yup from 'yup'
 
 const cookies = new Cookies()
 
@@ -29,16 +32,19 @@ export default function EventsPage({ appUser }) {
   return (
     <Styles>
       <h1>Admin Events</h1>
-      {Object.values(appUser.adminEvents).map(event => (
-        <EventCard
-          key={event.id}
-          event={event}
-          onClick={() => {
-            cookies.set('currentEventId', event.id)
-            window.location.href = '/sessions'
-          }}
-        />
-      ))}
+      {Object.values(appUser.adminEvents).map(event => {
+        return (
+          <EventCard
+            key={event.id}
+            event={event}
+            onClick={() => {
+              cookies.set('currentEventId', event.id)
+              window.location.href = '/sessions'
+            }}
+            isOwner={appUser.ownedEventIds.includes(event.id)}
+          />
+        )
+      })}
       <CreateEventCard appUserEmail={appUser.emailAddr} />
       <hr />
       <h1>Participant Events</h1>
@@ -93,20 +99,90 @@ function ParticipantEventModal({ event, show, onHide }) {
   )
 }
 
-function EventCard({ event, onClick }) {
+function EventCard({ event, onClick, isOwner }) {
+  const [showRename, setShowRename] = useState(false)
   return (
-    <Card onClick={onClick} className="btn btn-outline-dark m-3">
-      <Card.Body
-        style={{
-          display: 'flex',
-          direction: 'column',
-          justifyContent: 'center',
-          height: '100%',
+    <>
+      {showRename && (
+        <RenameModal event={event} onHide={() => setShowRename(false)} />
+      )}
+
+      <Card
+        onClick={e => {
+          if (e.target.tagName === 'BUTTON') {
+            setShowRename(true)
+          } else onClick()
+        }}
+        className="btn btn-outline-dark m-3"
+      >
+        <Card.Body>
+          <Card.Title>{event.title}</Card.Title>
+          {isOwner && (
+            <Card.Text>
+              <Button variant="info" size="sm">
+                Rename
+              </Button>
+            </Card.Text>
+          )}
+        </Card.Body>
+      </Card>
+    </>
+  )
+}
+
+function RenameModal({ event, onHide }) {
+  return (
+    <Modal show={true} onHide={onHide} size="lg">
+      <Formik
+        validateOnChange={true}
+        initialValues={{ title: event.title, shortTitle: event.shortTitle }}
+        validationSchema={yup.object({
+          title: yup.string().required().max(63),
+          shortTitle: yup
+            .string()
+            .max(24)
+            .when('title', {
+              is: title => title && title.length > 24,
+              then: yup.string().required(),
+              otherwise: yup.string(),
+            }),
+        })}
+        onSubmit={async (values, { setSubmitting }) => {
+          setSubmitting(true)
+          console.log('submitted', values)
+          await getPHP('renameEvent', {
+            newTitle: sanitize(values.title),
+            newShortTitle: sanitize(values.shortTitle),
+            eventId: event.id,
+          })
+          await getAppData()
+          setSubmitting(false)
+          onHide()
         }}
       >
-        <Card.Title className="align-middle">{event.title}</Card.Title>
-      </Card.Body>
-    </Card>
+        {({ values, isSubmitting }) => {
+          return (
+            <Form className="m-3">
+              <FieldWithError name="title" placeholder="Title" />
+              <br />
+              <FieldWithError name="shortTitle" placeholder="Shortened Title" />
+              {/* <pre>{JSON.stringify(values)}</pre> */}
+              <Modal.Footer>
+                <Button onClick={onHide} variant="secondary">
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  Submit
+                  {isSubmitting && (
+                    <Spinner animation="border" variant="light" />
+                  )}
+                </Button>
+              </Modal.Footer>
+            </Form>
+          )
+        }}
+      </Formik>
+    </Modal>
   )
 }
 
@@ -161,10 +237,10 @@ function CreateEventCard({ appUserEmail }) {
         <Modal.Header closeButton>
           <h4>Create New Event</h4>
         </Modal.Header>
-        <Form className="m-3 ">
-          <Form.Group>
-            <Form.Label>Event Title</Form.Label>
-            <Form.Control
+        <FormBS className="m-3 ">
+          <FormBS.Group>
+            <FormBS.Label>Event Title</FormBS.Label>
+            <FormBS.Control
               ref={titleField}
               value={title}
               onChange={e => {
@@ -173,11 +249,11 @@ function CreateEventCard({ appUserEmail }) {
               placeholder="Event Title"
               maxlength="63"
             />
-          </Form.Group>
+          </FormBS.Group>
           {title.trim().length > 24 && (
-            <Form.Group>
-              <Form.Label>Shortened Title</Form.Label>
-              <Form.Control
+            <FormBS.Group>
+              <FormBS.Label>Shortened Title</FormBS.Label>
+              <FormBS.Control
                 value={shortTitle}
                 onChange={e => {
                   setShortTitle(e.target.value)
@@ -195,15 +271,15 @@ function CreateEventCard({ appUserEmail }) {
                 placeholder="Short Title"
                 maxlength="24"
               />
-              <Form.Text className="text-muted">
+              <FormBS.Text className="text-muted">
                 <strong>{24 - shortTitle.trim().length}</strong> characters left
-              </Form.Text>
-            </Form.Group>
+              </FormBS.Text>
+            </FormBS.Group>
           )}
           <br />
-          <Form.Group>
-            <Form.Label>Group Names (optional)</Form.Label>
-            <Form.Control
+          <FormBS.Group>
+            <FormBS.Label>Group Names (optional)</FormBS.Label>
+            <FormBS.Control
               value={group}
               onChange={e => setGroup(e.target.value)}
               onKeyPress={e => {
@@ -213,9 +289,9 @@ function CreateEventCard({ appUserEmail }) {
                 }
               }}
             />
-            <Form.Text className="text-muted">
+            <FormBS.Text className="text-muted">
               (Press Enter to submit each one)
-            </Form.Text>
+            </FormBS.Text>
             <br />
             <ListGroup>
               {groupList.map(group => (
@@ -235,10 +311,10 @@ function CreateEventCard({ appUserEmail }) {
                 </ListGroup.Item>
               ))}
             </ListGroup>
-          </Form.Group>
-          <Form.Group>
-            <Form.Label>Admin Emails (optional)</Form.Label>
-            <Form.Control
+          </FormBS.Group>
+          <FormBS.Group>
+            <FormBS.Label>Admin Emails (optional)</FormBS.Label>
+            <FormBS.Control
               value={admin}
               onChange={e => setAdmin(e.target.value)}
               onKeyPress={e => {
@@ -252,9 +328,9 @@ function CreateEventCard({ appUserEmail }) {
                 }
               }}
             />
-            <Form.Text className="text-muted">
+            <FormBS.Text className="text-muted">
               (Press Enter to submit each one)
-            </Form.Text>
+            </FormBS.Text>
             <br />
             <ListGroup>
               {adminList.map(admin => (
@@ -274,11 +350,11 @@ function CreateEventCard({ appUserEmail }) {
                 </ListGroup.Item>
               ))}
             </ListGroup>
-          </Form.Group>
+          </FormBS.Group>
 
-          <Form.Group>
-            <Form.Label>Participant Emails (optional)</Form.Label>
-            <Form.Control
+          <FormBS.Group>
+            <FormBS.Label>Participant Emails (optional)</FormBS.Label>
+            <FormBS.Control
               value={participant}
               onChange={e => setParticipant(e.target.value)}
               onKeyPress={e => {
@@ -292,9 +368,9 @@ function CreateEventCard({ appUserEmail }) {
                 }
               }}
             />
-            <Form.Text className="text-muted">
+            <FormBS.Text className="text-muted">
               (Press Enter to submit each one)
-            </Form.Text>
+            </FormBS.Text>
             <br />
             <ListGroup>
               {participantList.map(participant => (
@@ -316,8 +392,8 @@ function CreateEventCard({ appUserEmail }) {
                 </ListGroup.Item>
               ))}
             </ListGroup>
-          </Form.Group>
-        </Form>
+          </FormBS.Group>
+        </FormBS>
         <Modal.Footer>
           <Button
             onClick={() => {

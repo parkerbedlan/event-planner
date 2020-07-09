@@ -8,7 +8,8 @@ export default class AppUser {
     profilePic,
     groupIds,
     adminEvents,
-    participantEvents
+    participantEvents,
+    ownedEventIds
   ) {
     this.emailAddr = emailAddr
     this.firstName = firstName
@@ -17,6 +18,7 @@ export default class AppUser {
     this.groupIds = groupIds
     this.adminEvents = adminEvents
     this.participantEvents = participantEvents
+    this.ownedEventIds = ownedEventIds
   }
 
   static async fetch(emailAddr) {
@@ -57,12 +59,17 @@ export default class AppUser {
       }
     }
 
+    const ownedEventIds = await getPHP('getUserOwnerEventIds', {
+      emailAddr,
+    })
+
     return new AppUser(
       userData,
       profilePic,
       groupIds,
       adminEvents,
-      participantEvents
+      participantEvents,
+      ownedEventIds
     )
   }
 }

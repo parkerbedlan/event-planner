@@ -201,6 +201,18 @@ function getUserAdminEventIds() {
   return json_encode($all_results);
 }
 
+function getUserOwnerEventIds() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $query = "SELECT eventId FROM Events_Users WHERE emailAddr='$emailAddr' AND isOwner=1";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $eventId = (int) $result->fetch_object()->eventId;
+    array_push($all_results, $eventId);
+  }
+  return json_encode($all_results);
+}
+
 function getUserParticipantEventIds() {
   $emailAddr = json_decode($_POST['emailAddr']);
   $query = "SELECT eventId FROM Events_Users WHERE emailAddr='$emailAddr' AND isAdmin=0";
@@ -350,4 +362,20 @@ function editSession() {
   $db->query("UPDATE Sessions SET title=\"$title\", description=\"$description\", startTime=\"$startTime\", endTime=\"$endTime\", link=\"$link\", location=\"$location\", everyone=$everyone WHERE id=$sessionId");
 
   return json_encode('not yet implemented');
+}
+
+function isOwner() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $eventId = json_decode($_POST['eventId']);
+  $result = $GLOBALS['db']->query("SELECT isOwner FROM Events_Users WHERE emailAddr=\"$emailAddr\" AND eventId=$eventId");
+  return json_encode((int)$result->fetch_object()->isOwner);
+}
+
+function renameEvent() {
+  $newTitle = json_decode($_POST['newTitle']);
+  $newShortTitle = json_decode($_POST['newShortTitle']);
+  $eventId = json_decode($_POST['eventId']);
+
+  $GLOBALS['db']->query("UPDATE Events SET title=\"$newTitle\", shortTitle=\"$newShortTitle\" WHERE id=$eventId");
+  return json_encode("renamed event");
 }

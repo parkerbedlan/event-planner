@@ -10,10 +10,11 @@ import {
   Row,
   Alert,
 } from 'react-bootstrap'
-import { Formik, Field, Form, useField } from 'formik'
+import { Formik, Field, Form } from 'formik'
 import Cookies from 'universal-cookie'
 import { getAppData } from '../App'
 import { getPHP, sanitize } from '../phpHelper'
+import { FieldWithError } from '../components/FieldWithError'
 
 const cookies = new Cookies()
 
@@ -222,31 +223,6 @@ function DetailsSessionModal({ onHide, session, event }) {
         </p>
       </div>
     </Modal>
-  )
-}
-
-const FieldWithError = ({
-  placeholder,
-  style,
-  className,
-  type,
-  as,
-  ...props
-}) => {
-  const [field, { error, touched }] = useField(props)
-  return (
-    <FormBS.Group>
-      {placeholder && <strong>{placeholder}: </strong>}
-      <FormBS.Control
-        placeholder={placeholder}
-        style={style}
-        className={className}
-        as={as}
-        type={type}
-        {...field}
-      />
-      {error && touched && <Alert variant="danger">{error}</Alert>}
-    </FormBS.Group>
   )
 }
 
