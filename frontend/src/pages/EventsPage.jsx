@@ -101,31 +101,53 @@ function ParticipantEventModal({ event, show, onHide }) {
 
 function EventCard({ event, onClick, isOwner }) {
   const [showRename, setShowRename] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   return (
     <>
       {showRename && (
         <RenameModal event={event} onHide={() => setShowRename(false)} />
       )}
 
-      <Card
-        onClick={e => {
-          if (e.target.tagName === 'BUTTON') {
-            setShowRename(true)
-          } else onClick()
-        }}
-        className="btn btn-outline-dark m-3"
-      >
-        <Card.Body>
-          <Card.Title>{event.title}</Card.Title>
-          {isOwner && (
-            <Card.Text>
-              <Button variant="info" size="sm">
-                Rename
-              </Button>
-            </Card.Text>
-          )}
-        </Card.Body>
-      </Card>
+      {!deleting && (
+        <Card
+          onClick={async e => {
+            if (e.target.tagName === 'BUTTON') {
+              if (e.target.innerHTML === 'Rename') setShowRename(true)
+              else if (
+                window.confirm(
+                  `Are you sure you want to delete ${event.title}?`
+                )
+              ) {
+                setDeleting(true)
+                await getPHP('removeEvent', {
+                  eventId: event.id,
+                })
+                await getAppData()
+              }
+            } else onClick()
+          }}
+          className="btn btn-outline-dark m-3"
+        >
+          <Card.Body>
+            <Card.Title>{event.title}</Card.Title>
+            {isOwner && (
+              <Card.Text>
+                <Card.Link>
+                  <Button variant="info" size="sm">
+                    Rename
+                  </Button>
+                </Card.Link>
+                <Card.Link>
+                  <Button variant="danger" size="sm">
+                    Delete
+                  </Button>
+                </Card.Link>
+              </Card.Text>
+            )}
+          </Card.Body>
+        </Card>
+      )}
     </>
   )
 }
@@ -143,8 +165,8 @@ function RenameModal({ event, onHide }) {
             .max(24)
             .when('title', {
               is: title => title && title.length > 24,
-              then: yup.string().required(),
-              otherwise: yup.string(),
+              then: yup.string().required().max(24),
+              otherwise: yup.string().max(yup.ref('title.length')),
             }),
         })}
         onSubmit={async (values, { setSubmitting }) => {
@@ -166,7 +188,6 @@ function RenameModal({ event, onHide }) {
               <FieldWithError name="title" placeholder="Title" />
               <br />
               <FieldWithError name="shortTitle" placeholder="Shortened Title" />
-              {/* <pre>{JSON.stringify(values)}</pre> */}
               <Modal.Footer>
                 <Button onClick={onHide} variant="secondary">
                   Cancel

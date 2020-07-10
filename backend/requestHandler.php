@@ -379,3 +379,11 @@ function renameEvent() {
   $GLOBALS['db']->query("UPDATE Events SET title=\"$newTitle\", shortTitle=\"$newShortTitle\" WHERE id=$eventId");
   return json_encode("renamed event");
 }
+
+function removeEvent() {
+  $eventId = json_decode($_POST['eventId']);
+
+  $GLOBALS['db']->query("DELETE FROM Events WHERE id=$eventId");
+
+  return json_encode('removed event');
+}
