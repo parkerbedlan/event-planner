@@ -119,8 +119,7 @@ function App() {
             <br />
           </>
         )}
-        {/* <img id="image1" alt="profile pic" /> */}
-        {/* {JSON.stringify(state)} */}
+        {/* <pre>{JSON.stringify(state, null, 2)}</pre> */}
       </Layout>
     </AppState.Provider>
   )

@@ -123,7 +123,7 @@ function EventCard({ event, onClick, isOwner }) {
                 await getPHP('removeEvent', {
                   eventId: event.id,
                 })
-                await getAppData()
+                getAppData()
               }
             } else onClick()
           }}
@@ -177,7 +177,7 @@ function RenameModal({ event, onHide }) {
             newShortTitle: sanitize(values.shortTitle),
             eventId: event.id,
           })
-          await getAppData()
+          getAppData()
           setSubmitting(false)
           onHide()
         }}
@@ -446,7 +446,7 @@ function CreateEventCard({ appUserEmail }) {
                   adminList,
                   participantList,
                 })
-                await getAppData()
+                getAppData()
                 setShow(false)
                 clearAllFields()
               }

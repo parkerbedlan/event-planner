@@ -17,16 +17,20 @@ export default class Event {
   static async fetch(eventId) {
     const eventData = await getPHP('getEventData', { eventId })
 
-    const adminsData = await getPHP('getAdmins', { eventId })
+    const adminEmailAddrs = await getPHP('getAdminEmailAddrs', { eventId })
     const admins = {}
-    for (const adminData of adminsData) {
-      admins[adminData.emailAddr] = new User(adminData)
+    for (const adminEmailAddr of adminEmailAddrs) {
+      admins[adminEmailAddr] = await User.fetch(adminEmailAddr)
     }
 
-    const participantsData = await getPHP('getParticipants', { eventId })
+    const participantEmailAddrs = await getPHP('getParticipantEmailAddrs', {
+      eventId,
+    })
     const participants = {}
-    for (const participantData of participantsData) {
-      participants[participantData.emailAddr] = new User(participantData)
+    for (const participantEmailAddr of participantEmailAddrs) {
+      participants[participantEmailAddr] = await User.fetch(
+        participantEmailAddr
+      )
     }
 
     const sessionIds = await getPHP('getEventSessionIds', { eventId })

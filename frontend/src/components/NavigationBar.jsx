@@ -241,7 +241,7 @@ function EditProfileModal({ show, setShow, appUser }) {
                 'json',
                 'raw'
               )
-              await getAppData()
+              getAppData()
               setShow(false)
               setShowSpinner(false)
               setPicChanged(false)

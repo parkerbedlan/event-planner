@@ -6,7 +6,6 @@ import {
   Spinner,
   Form as FormBS,
   Card,
-  Col,
   Row,
   Alert,
 } from 'react-bootstrap'
@@ -19,7 +18,7 @@ import { FieldWithError } from '../components/FieldWithError'
 const cookies = new Cookies()
 
 const Styles = styled.div`
-  * {
+  .mt {
     margin-top: 1em;
   }
 `
@@ -45,9 +44,7 @@ export default function SessionsPage({ appUser }) {
         />
       )}
 
-      <h1 className="m-3" style={{ display: 'inline' }}>
-        Sessions
-      </h1>
+      <h1 className="m-3 d-inline">Sessions</h1>
       <Button
         onClick={() => setShowNew(true)}
         variant="secondary"
@@ -80,11 +77,11 @@ export default function SessionsPage({ appUser }) {
               <>
                 {Boolean(monthHeader) && (
                   <>
-                    <h1>{monthHeader}</h1>
+                    <h1 className="mt">{monthHeader}</h1>
                     <hr />
                   </>
                 )}
-                {Boolean(dateHeader) && <h2>{dateHeader}</h2>}
+                {Boolean(dateHeader) && <h2 className="mt">{dateHeader}</h2>}
 
                 <SessionCard session={session} event={event} />
               </>
@@ -104,16 +101,16 @@ function SessionCard({ session, event }) {
   return (
     <>
       {!deleting && (
-        <Card>
-          <Row className="m-0">
-            <Col>
+        <Card className="mt">
+          <Row>
+            <div className="my-auto ml-4 mr-auto">
               <strong>{session.title}</strong>
               <br />
               {session.startTime.substring(11, 16) +
                 ' - ' +
                 session.endTime.substring(11, 16)}
-            </Col>
-            <Col>
+            </div>
+            <div className="my-auto mr-4 ml-auto">
               <Button
                 onClick={() => setShowDetails(true)}
                 variant="secondary"
@@ -139,7 +136,7 @@ function SessionCard({ session, event }) {
                     await getPHP('removeSession', {
                       sessionId: session.id,
                     })
-                    await getAppData()
+                    getAppData()
                   }
                 }}
                 variant="danger"
@@ -147,7 +144,7 @@ function SessionCard({ session, event }) {
               >
                 Delete
               </Button>
-            </Col>
+            </div>
           </Row>
         </Card>
       )}
@@ -184,7 +181,7 @@ function DetailsSessionModal({ onHide, session, event }) {
         </p>
         <p>
           <strong>Description: </strong>
-          {session.description || 'None'}
+          {session.description || '[None]'}
         </p>
         <p>
           <strong>Start Time: </strong>
@@ -196,11 +193,11 @@ function DetailsSessionModal({ onHide, session, event }) {
         </p>
         <p>
           <strong>Link: </strong>
-          {session.link || 'None'}
+          {session.link || '[None]'}
         </p>
         <p>
           <strong>Location: </strong>
-          {session.location || 'None'}
+          {session.location || '[None]'}
         </p>
         <p>
           <strong>Attendees: </strong>
@@ -284,7 +281,7 @@ function EditSessionModal({ onHide, session, event }) {
             // eslint-disable-next-line
             everyone: values.everyone == 'true',
           })
-          await getAppData()
+          getAppData()
           setSubmitting(false)
           onHide()
         }}
@@ -586,7 +583,7 @@ function NewSessionModal({ onHide, event, appUserEmail }) {
                 groups: groups,
                 everyone,
               })
-              await getAppData()
+              getAppData()
               onHide()
             }
           }}
