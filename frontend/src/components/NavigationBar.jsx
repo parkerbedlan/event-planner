@@ -31,7 +31,10 @@ export default function NavigationBar() {
         const adminEvents = await getPHP('getAdminEventTitles', {
           emailAddr: appUser.emailAddr,
         })
-        setAppUser({ ...appUser, profilePic, adminEvents })
+        const { firstName, lastName } = await getPHP('getUserData', {
+          emailAddr: appUser.emailAddr,
+        })
+        setAppUser({ ...appUser, profilePic, adminEvents, firstName, lastName })
         await setLoading(false)
       }
       f()
@@ -71,7 +74,7 @@ export default function NavigationBar() {
                   <Nav.Link href="/sessions">
                     <h5>Sessions</h5>
                   </Nav.Link>
-                  <Nav.Link disabled href="/admins">
+                  <Nav.Link href="/admins">
                     <h5>Admins</h5>
                   </Nav.Link>
                   <Nav.Link disabled href="/participants">
