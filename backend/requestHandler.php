@@ -48,12 +48,6 @@ function getProfilePic() {
   return $output;
 }
 
-function getEventData() {
-  $id = $_POST['eventId'];
-  $query = "SELECT title, shortTitle FROM events WHERE id=$id";
-  return json_encode($GLOBALS['db']->query($query)->fetch_object());
-}
-
 function getUserData() {
   $emailAddr = json_decode($_POST['emailAddr']);
   $query = "SELECT emailAddr, firstName, lastName FROM Users WHERE emailAddr='$emailAddr'";
@@ -111,18 +105,6 @@ function getParticipantEmailAddrs() {
   for ($i = 0; $i < $result->num_rows; $i++) {
     $userObj = $result->fetch_object()->emailAddr;
     array_push($all_results, $userObj);
-  }
-  return json_encode($all_results);
-}
-
-function getEventSessionIds() {
-  $eventId = $_POST['eventId'];
-  $query = "SELECT id FROM Sessions WHERE eventId=$eventId ORDER BY startTime";
-  $result = $GLOBALS['db']->query($query);
-  $all_results = [];
-  for ($i = 0; $i < $result->num_rows; $i ++) {
-    $sessionIdObj = (int)$result->fetch_object()->id;
-    array_push($all_results, $sessionIdObj);
   }
   return json_encode($all_results);
 }
@@ -217,18 +199,6 @@ function getUserGroupIds() {
   return json_encode($all_results);
 }
 
-function getUserAdminEventIds() {
-  $emailAddr = json_decode($_POST['emailAddr']);
-  $query = "SELECT eventId FROM Events_Users WHERE emailAddr='$emailAddr' AND isAdmin=1";
-  $result = $GLOBALS['db']->query($query);
-  $all_results = [];
-  for ($i = 0; $i < $result->num_rows; $i ++) {
-    $eventId = (int) $result->fetch_object()->eventId;
-    array_push($all_results, $eventId);
-  }
-  return json_encode($all_results);
-}
-
 function getUserOwnerEventIds() {
   $emailAddr = json_decode($_POST['emailAddr']);
   $query = "SELECT eventId FROM Events_Users WHERE emailAddr='$emailAddr' AND isOwner=1";
@@ -236,18 +206,6 @@ function getUserOwnerEventIds() {
   $all_results = [];
   for ($i = 0; $i < $result->num_rows; $i ++) {
     $eventId = (int) $result->fetch_object()->eventId;
-    array_push($all_results, $eventId);
-  }
-  return json_encode($all_results);
-}
-
-function getUserParticipantEventIds() {
-  $emailAddr = json_decode($_POST['emailAddr']);
-  $query = "SELECT eventId FROM Events_Users WHERE emailAddr='$emailAddr' AND isAdmin=0";
-  $result = $GLOBALS['db']->query($query);
-  $all_results = [];
-  for ($i = 0; $i < $result->num_rows; $i ++) {
-    $eventId = $result->fetch_object()->eventId;
     array_push($all_results, $eventId);
   }
   return json_encode($all_results);
@@ -318,33 +276,6 @@ function editUser() {
   return json_encode("updated user");
 }
 
-function getUserEventSessions() {
-  $db = $GLOBALS['db'];
-  $emailAddr = json_decode($_POST['emailAddr']);
-  $eventId = json_decode($_POST['eventId']);
-
-  $all_results = [];
-  
-  $result = $db->query("SELECT DISTINCT groups_sessions.sessionId FROM ((groups_sessions
-  INNER JOIN groups_users ON groups_sessions.groupId=groups_users.groupId)
-  INNER JOIN groups ON groups_sessions.groupId=groups.id)
-  WHERE groups_users.emailAddr='$emailAddr'
-  AND groups.eventId=$eventId;");
-  for ($i = 0; $i < $result->num_rows; $i++) {
-    $sessionId = (int) $result->fetch_object()->sessionId;
-    array_push($all_results, $sessionId);
-  }
-
-  // todo: also get all sessions from that event with the boolean 'everyone'
-  $result = $db->query("SELECT id FROM Sessions WHERE eventId=$eventId AND everyone=1");
-  for ($i = 0; $i < $result->num_rows; $i++) {
-    $sessionId = (int) $result->fetch_object()->id;
-    array_push($all_results, $sessionId);
-  }
-
-  return json_encode($all_results);
-}
-
 function getUserEventGroups() {
   $emailAddr = json_decode($_POST['emailAddr']);
   $eventId = json_decode($_POST['eventId']);
@@ -412,7 +343,7 @@ function isOwner() {
   $emailAddr = json_decode($_POST['emailAddr']);
   $eventId = json_decode($_POST['eventId']);
   $result = $GLOBALS['db']->query("SELECT isOwner FROM Events_Users WHERE emailAddr=\"$emailAddr\" AND eventId=$eventId");
-  return json_encode((int)$result->fetch_object()->isOwner);
+  return json_encode((boolean)$result->fetch_object()->isOwner);
 }
 
 function renameEvent() {
@@ -430,4 +361,185 @@ function removeEvent() {
   $GLOBALS['db']->query("DELETE FROM Events WHERE id=$eventId");
 
   return json_encode('removed event');
+}
+
+function getEventData() {
+  $id = $_POST['eventId'];
+  $query = "SELECT title, shortTitle FROM events WHERE id=$id";
+  return json_encode($GLOBALS['db']->query($query)->fetch_object());
+}
+
+function getUserParticipantEventIds() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $query = "SELECT eventId FROM Events_Users WHERE emailAddr='$emailAddr' AND isAdmin=0";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $eventId = $result->fetch_object()->eventId;
+    array_push($all_results, $eventId);
+  }
+  return json_encode($all_results);
+}
+
+function getParticipantEventTitles() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $result = $GLOBALS['db']->query("SELECT Events.id, Events.title FROM Events INNER JOIN Events_Users ON Events.id=Events_Users.eventId WHERE Events_Users.emailAddr='$emailAddr' AND Events_Users.isAdmin=0");
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $eventObj = $result->fetch_object();
+    array_push($all_results, $eventObj);
+  }
+  $output = json_encode($all_results);
+  return $output;
+}
+
+function getAdminEventTitles() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $result = $GLOBALS['db']->query("SELECT Events.id, Events.title, Events.shortTitle FROM Events INNER JOIN Events_Users ON Events.id=Events_Users.eventId WHERE Events_Users.emailAddr='$emailAddr' AND Events_Users.isAdmin=1");
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $eventObj = $result->fetch_object();
+    array_push($all_results, $eventObj);
+  }
+  $output = json_encode($all_results);
+  return $output;
+}
+
+function getUserAdminEventIds() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $query = "SELECT eventId FROM Events_Users WHERE emailAddr='$emailAddr' AND isAdmin=1";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $eventId = (int) $result->fetch_object()->eventId;
+    array_push($all_results, $eventId);
+  }
+  return json_encode($all_results);
+}
+
+function getUserEventSessionIds() {
+  $db = $GLOBALS['db'];
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $eventId = json_decode($_POST['eventId']);
+
+  $all_results = [];
+  
+  $result = $db->query("SELECT DISTINCT groups_sessions.sessionId FROM ((groups_sessions
+  INNER JOIN groups_users ON groups_sessions.groupId=groups_users.groupId)
+  INNER JOIN groups ON groups_sessions.groupId=groups.id)
+  WHERE groups_users.emailAddr='$emailAddr'
+  AND groups.eventId=$eventId;");
+  for ($i = 0; $i < $result->num_rows; $i++) {
+    $sessionId = (int) $result->fetch_object()->sessionId;
+    array_push($all_results, $sessionId);
+  }
+
+  // todo: also get all sessions from that event with the boolean 'everyone'
+  $result = $db->query("SELECT id, title, startTime, endTime FROM Sessions WHERE eventId=$eventId AND everyone=1");
+  for ($i = 0; $i < $result->num_rows; $i++) {
+    $sessionId = (int) $result->fetch_object()->id;
+    array_push($all_results, $sessionId);
+  }
+
+  return json_encode($all_results);
+}
+
+function getUserEventSessions() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $eventId = json_decode($_POST['eventId']);
+  $result = $GLOBALS['db']->query("SELECT DISTINCT id, title, startTime, endTime FROM Sessions WHERE eventId=$eventId AND everyone=1 UNION SELECT DISTINCT Sessions.id, Sessions.title, Sessions.startTime, Sessions.endTime FROM ((Sessions INNER JOIN Groups_Sessions ON Sessions.id=Groups_Sessions.sessionId) INNER JOIN Groups_Users ON Groups_Sessions.groupId=Groups_Users.groupId) WHERE Sessions.eventId=$eventId AND Groups_Users.emailAddr='$emailAddr';");
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i++) {
+    array_push($all_results, $result->fetch_object());
+  }
+  $output = json_encode($all_results);
+  return $output;
+}
+
+function getEventSessionIds() {
+  $eventId = $_POST['eventId'];
+  $query = "SELECT id FROM Sessions WHERE eventId=$eventId ORDER BY startTime";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $sessionIdObj = (int)$result->fetch_object()->id;
+    array_push($all_results, $sessionIdObj);
+  }
+  return json_encode($all_results);
+}
+
+function getEventSessions() {
+  $eventId = $_POST['eventId'];
+  $query = "SELECT id, title, startTime, endTime FROM Sessions WHERE eventId=$eventId ORDER BY startTime";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $sessionObj = $result->fetch_object();
+    $sessionObj->id = (int) $sessionObj->id;
+    array_push($all_results, $sessionObj);
+  }
+  $output = json_encode($all_results);
+  return $output;
+}
+
+function getEventSessionsDetails() {
+  $eventId = json_decode($_POST['eventId']);
+  $query = "SELECT description, link, location, everyone FROM Sessions WHERE eventId=$eventId ORDER BY startTime";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $sessionObj = $result->fetch_object();
+    $sessionObj->everyone = (boolean) $sessionObj->everyone;
+    array_push($all_results, $sessionObj);
+  }
+  $output = json_encode($all_results);
+  return $output;
+}
+
+function getEventGroupsAndSize() {
+  $db = $GLOBALS['db'];
+  $eventId = json_decode($_POST['eventId']);
+
+  $eventSize = (int)$db->query("SELECT COUNT(eventId) AS size FROM events_users WHERE eventId=$eventId")->fetch_object()->size;
+
+  $groups = [];
+  $result = $db->query("SELECT groupId AS id, groups.title, Count(*) AS size FROM groups_users INNER JOIN groups ON groups_users.groupId=groups.id WHERE groups.eventId=$eventId GROUP BY id");
+  for ($i = 0; $i < $result->num_rows; $i++) {
+    $groupObj=$result->fetch_object();
+    $groupObj->id = (int)$groupObj->id;
+    $groupObj->size = (int)$groupObj->size;
+    array_push($groups, $groupObj);
+  }
+
+  $eventObj = new stdClass();
+  $eventObj->id = $eventId;
+  $eventObj->size = $eventSize;
+  $eventObj->groups = $groups;
+
+  $output = json_encode($eventObj);
+
+  return $output;
+
+}
+
+function getEventGroups() {
+  $db = $GLOBALS['db'];
+  $eventId = json_decode($_POST['eventId']);
+
+  $groups = [];
+  $result = $db->query("SELECT id, title FROM groups WHERE eventId=$eventId");
+  for ($i = 0; $i < $result->num_rows; $i++) {
+    $groupObj=$result->fetch_object();
+    $groupObj->id = (int)$groupObj->id;
+    array_push($groups, $groupObj);
+  }
+
+  $eventObj = new stdClass();
+  $eventObj->id = $eventId;
+  $eventObj->groups = $groups;
+
+  $output = json_encode($eventObj);
+
+  return $output;
+
 }

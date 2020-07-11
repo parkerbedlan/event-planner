@@ -12,16 +12,37 @@ import {
 import { blobToUrl, getPHP, sanitize, resizeImage } from '../phpHelper'
 import { Auth0Context } from '../contexts/auth0-context'
 import Cookies from 'universal-cookie'
-import { getAppData } from '../App'
+import { AppUser } from '../App'
 
 const cookies = new Cookies()
 
-export default function NavigationBar({ updated, appUser }) {
+export default function NavigationBar() {
+  const { appUser, setAppUser } = useContext(AppUser)
+  const [isLoading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (isLoading && appUser.emailAddr) {
+      async function f() {
+        const profilePic = await getPHP(
+          'getProfilePic',
+          { emailAddr: appUser.emailAddr },
+          'blob'
+        )
+        const adminEvents = await getPHP('getAdminEventTitles', {
+          emailAddr: appUser.emailAddr,
+        })
+        setAppUser({ ...appUser, profilePic, adminEvents })
+        await setLoading(false)
+      }
+      f()
+    }
+  }, [isLoading, appUser, setAppUser])
+
   return (
     <>
       <Navbar fixed="top" bg="dark" variant="dark" expand="lg">
         <Navbar.Brand href="/">
-          {updated ? (
+          {!isLoading ? (
             <img
               src={require('../images/logo.png')}
               width="30"
@@ -33,43 +54,44 @@ export default function NavigationBar({ updated, appUser }) {
           )}
         </Navbar.Brand>
 
-        {Boolean(window.location.pathname !== '/') ? (
-          <>
-            {Boolean(appUser.adminEvents) && (
-              <Nav className="mr-auto">
-                <EventDropdown adminEvents={appUser.adminEvents} />
-              </Nav>
-            )}
-            <Navbar.Toggle aria-controls="basic-navbar-nav" />
-            <Navbar.Collapse
-              id="basic-navbar-nav"
-              className="justify-content-end"
-            >
-              <Nav className="ml-auto">
-                <Nav.Link href="/sessions">
-                  <h5>Sessions</h5>
-                </Nav.Link>
-                <Nav.Link href="/admins">
-                  <h5>Admins</h5>
-                </Nav.Link>
-                <Nav.Link href="/participants">
-                  <h5>Participants</h5>
-                </Nav.Link>
-                <Nav.Link disabled href="/groups">
-                  <h5>Groups</h5>
-                </Nav.Link>
-                <Nav.Link disabled href="/notifications">
-                  <h5>Notifications</h5>
-                </Nav.Link>
-                <ProfileDropdown appUser={appUser} />
-              </Nav>
-            </Navbar.Collapse>
-          </>
-        ) : (
-          <Nav className="ml-auto">
-            <ProfileDropdown appUser={appUser} className="ml-auto" />
-          </Nav>
-        )}
+        {!isLoading &&
+          (window.location.pathname !== '/' ? (
+            <>
+              {Boolean(appUser.adminEvents) && (
+                <Nav className="mr-auto">
+                  <EventDropdown adminEvents={appUser.adminEvents} />
+                </Nav>
+              )}
+              <Navbar.Toggle aria-controls="basic-navbar-nav" />
+              <Navbar.Collapse
+                id="basic-navbar-nav"
+                className="justify-content-end"
+              >
+                <Nav className="ml-auto">
+                  <Nav.Link href="/sessions">
+                    <h5>Sessions</h5>
+                  </Nav.Link>
+                  <Nav.Link disabled href="/admins">
+                    <h5>Admins</h5>
+                  </Nav.Link>
+                  <Nav.Link disabled href="/participants">
+                    <h5>Participants</h5>
+                  </Nav.Link>
+                  <Nav.Link disabled href="/groups">
+                    <h5>Groups</h5>
+                  </Nav.Link>
+                  <Nav.Link disabled href="/notifications">
+                    <h5>Notifications</h5>
+                  </Nav.Link>
+                  <ProfileDropdown appUser={appUser} />
+                </Nav>
+              </Navbar.Collapse>
+            </>
+          ) : (
+            <Nav className="ml-auto">
+              <ProfileDropdown appUser={appUser} className="ml-auto" />
+            </Nav>
+          ))}
       </Navbar>
       <div style={{ marginTop: '6em' }} />
     </>
@@ -78,8 +100,13 @@ export default function NavigationBar({ updated, appUser }) {
 
 function EventDropdown({ adminEvents }) {
   return (
-    <NavDropdown title={adminEvents[cookies.get('currentEventId')].shortTitle}>
-      {Object.values(adminEvents).map(event => {
+    <NavDropdown
+      title={
+        adminEvents.find(event => event.id === cookies.get('currentEventId'))
+          .shortTitle
+      }
+    >
+      {adminEvents.map(event => {
         return (
           <NavDropdown.Item
             key={event.id}
@@ -88,8 +115,7 @@ function EventDropdown({ adminEvents }) {
               window.location.reload()
             }}
           >
-            {/*eslint-disable-next-line*/}
-            {event.id == cookies.get('currentEventId') ? (
+            {event.id === cookies.get('currentEventId') ? (
               <strong>{event.shortTitle}</strong>
             ) : (
               event.shortTitle
@@ -241,7 +267,7 @@ function EditProfileModal({ show, setShow, appUser }) {
                 'json',
                 'raw'
               )
-              getAppData()
+              window.location.reload()
               setShow(false)
               setShowSpinner(false)
               setPicChanged(false)

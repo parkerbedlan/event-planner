@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useContext } from 'react'
 import styled from 'styled-components'
 import {
   Button,
@@ -11,9 +11,10 @@ import {
 } from 'react-bootstrap'
 import { Formik, Field, Form } from 'formik'
 import Cookies from 'universal-cookie'
-import { getAppData } from '../App'
 import { getPHP, sanitize } from '../phpHelper'
 import { FieldWithError } from '../components/FieldWithError'
+import { AppUser } from '../App'
+import { LoadingScreen } from '../components/LoadingScreen'
 
 const cookies = new Cookies()
 
@@ -23,27 +24,65 @@ const Styles = styled.div`
   }
 `
 
-export default function SessionsPage({ appUser }) {
-  const currentEventId = cookies.get('currentEventId')
-  if (!currentEventId) window.location.href = '../'
-  const event = appUser.adminEvents[currentEventId]
+export default function SessionsPage() {
+  const {
+    appUser: { emailAddr },
+  } = useContext(AppUser)
+
+  const [isLoading, setLoading] = useState(true)
+  const [event, setEvent] = useState([])
+  useEffect(() => {
+    if (!emailAddr) return
+    async function f() {
+      const currentEventId = cookies.get('currentEventId')
+      if (!currentEventId) window.location.href = '../'
+
+      const sessions = await getPHP('getEventSessions', {
+        eventId: currentEventId,
+      })
+      const eventRequest = await getPHP('getEventGroupsAndSize', {
+        eventId: Number(currentEventId),
+      })
+      setEvent({ ...eventRequest, sessions })
+      await setLoading(false)
+
+      const sessionsDetails = await getPHP('getEventSessionsDetails', {
+        eventId: currentEventId,
+      })
+      setEvent(e => ({
+        ...e,
+        sessions: sessions.map((session, i) => ({
+          ...session,
+          ...sessionsDetails[i],
+        })),
+      }))
+      const sessionsGroupIds = await Promise.all(
+        sessions.map(
+          async ({ id }) =>
+            await getPHP('getSessionGroupIds', { sessionId: id })
+        )
+      )
+      setEvent(e => ({
+        ...e,
+        sessions: e.sessions.map((session, i) => ({
+          ...session,
+          groupIds: sessionsGroupIds[i],
+        })),
+      }))
+    }
+    f()
+  }, [emailAddr])
 
   const [showNew, setShowNew] = useState(false)
   const [showPrevSessions, setShowPrevSessions] = useState(false)
 
-  let date = useRef('')
-  let month = useRef('')
+  const month = useRef(null)
+  const date = useRef(null)
 
-  return (
+  return isLoading ? (
+    <LoadingScreen />
+  ) : (
     <Styles>
-      {showNew && (
-        <NewSessionModal
-          onHide={() => setShowNew(false)}
-          event={event}
-          appUserEmail={appUser.emailAddr}
-        />
-      )}
-
       <h1 className="m-3 d-inline">Sessions</h1>
       <Button
         onClick={() => setShowNew(true)}
@@ -59,29 +98,34 @@ export default function SessionsPage({ appUser }) {
         label="Show Previous Sessions"
       />
 
-      {event.sessions.map(session => {
+      {event.sessions.map((session, i, { length }) => {
         const showSession =
           showPrevSessions || new Date(session.startTime) >= new Date()
 
         let monthHeader = getMonth(session.startTime)
-        if (month === monthHeader || !showSession) monthHeader = ''
-        else month = monthHeader
+        if (month.current === monthHeader || !showSession) monthHeader = ''
+        else month.current = monthHeader
 
         let dateHeader = getDate(session.startTime)
-        if (date === dateHeader || !showSession) dateHeader = ''
-        else date = dateHeader
+        if (date.current === dateHeader || !showSession) dateHeader = ''
+        else date.current = dateHeader
+
+        if (i === length - 1) {
+          date.current = null
+          month.current = null
+        }
 
         return (
           <React.Fragment key={session.id}>
-            {Boolean(showSession) && (
+            {!!showSession && (
               <>
-                {Boolean(monthHeader) && (
+                {!!monthHeader && (
                   <>
                     <h1 className="mt">{monthHeader}</h1>
                     <hr />
                   </>
                 )}
-                {Boolean(dateHeader) && <h2 className="mt">{dateHeader}</h2>}
+                {!!dateHeader && <h2 className="mt">{dateHeader}</h2>}
 
                 <SessionCard session={session} event={event} />
               </>
@@ -89,6 +133,12 @@ export default function SessionsPage({ appUser }) {
           </React.Fragment>
         )
       })}
+      <NewSessionModal
+        show={showNew}
+        onHide={() => setShowNew(false)}
+        event={event}
+        appUserEmail={emailAddr}
+      />
     </Styles>
   )
 }
@@ -136,7 +186,7 @@ function SessionCard({ session, event }) {
                     await getPHP('removeSession', {
                       sessionId: session.id,
                     })
-                    getAppData()
+                    window.location.reload()
                   }
                 }}
                 variant="danger"
@@ -151,6 +201,7 @@ function SessionCard({ session, event }) {
 
       {showDetails && (
         <DetailsSessionModal
+          show={showDetails}
           session={session}
           event={event}
           onHide={() => setShowDetails(false)}
@@ -159,6 +210,7 @@ function SessionCard({ session, event }) {
 
       {showEdit && (
         <EditSessionModal
+          show={showEdit}
           session={session}
           event={event}
           onHide={() => setShowEdit(false)}
@@ -168,9 +220,12 @@ function SessionCard({ session, event }) {
   )
 }
 
-function DetailsSessionModal({ onHide, session, event }) {
+function DetailsSessionModal({ show, onHide, session, event }) {
+  useEffect(() => {
+    console.log('details mount', session.id)
+  }, [session.id])
   return (
-    <Modal show={true} onHide={onHide} size="lg">
+    <Modal show={show} onHide={onHide} size="lg">
       <Modal.Header closeButton>
         <h4>{session.title}</h4>
       </Modal.Header>
@@ -181,7 +236,8 @@ function DetailsSessionModal({ onHide, session, event }) {
         </p>
         <p>
           <strong>Description: </strong>
-          {session.description || '[None]'}
+          {session.description ||
+            (session.description === undefined ? 'Loading...' : '[None]')}
         </p>
         <p>
           <strong>Start Time: </strong>
@@ -193,224 +249,240 @@ function DetailsSessionModal({ onHide, session, event }) {
         </p>
         <p>
           <strong>Link: </strong>
-          {session.link || '[None]'}
+          {session.link ||
+            (session.link === undefined ? 'Loading...' : '[None]')}
         </p>
         <p>
           <strong>Location: </strong>
-          {session.location || '[None]'}
+          {session.location ||
+            (session.location === undefined ? 'Loading...' : '[None]')}
         </p>
-        <p>
-          <strong>Attendees: </strong>
-          {session.everyone
-            ? 'Everyone'
-            : session.groupIds.map(id => event.groups[id].title).join(', ')}
-        </p>
-        <p>
-          <strong>Number of Attendees: </strong>
-          {session.everyone
-            ? Object.keys(event.admins).length +
-              Object.keys(event.participants).length
-            : session.groupIds.reduce(
-                (a, b) =>
-                  a +
-                  event.groups[b].leaderEmails.length +
-                  event.groups[b].memberEmails.length,
-                0
-              )}
-        </p>
+        {session.groupIds === undefined ? (
+          'Loading...'
+        ) : (
+          <>
+            <p>
+              <strong>Attendees: </strong>
+              {session.everyone
+                ? 'Everyone'
+                : session.groupIds
+                    .map(
+                      groupId =>
+                        event.groups.find(({ id }) => id === groupId).title
+                    )
+                    .join(', ')}
+            </p>
+            <p>
+              <strong>Number of Attendees: </strong>
+              {session.everyone
+                ? event.size
+                : session.groupIds.reduce(
+                    (a, b) => a + event.groups.find(({ id }) => id === b).size,
+                    0
+                  )}
+            </p>
+          </>
+        )}
       </div>
     </Modal>
   )
 }
 
-function EditSessionModal({ onHide, session, event }) {
+function EditSessionModal({ show, onHide, session, event }) {
+  useEffect(() => {
+    console.log('edit mount', session.id)
+  }, [session.id])
   return (
-    <Modal show={true} onHide={onHide} size="lg" backdrop="static">
+    <Modal show={show} onHide={onHide} size="lg" backdrop="static">
       <Modal.Header closeButton>
         <h4>Edit: {session.title}</h4>
       </Modal.Header>
-      <Formik
-        validateOnChange={true}
-        initialValues={{
-          title: session.title,
-          description: session.description,
-          startDate: session.startTime.substring(0, 10),
-          startTime: session.startTime.substring(11, 16),
-          endDate: session.endTime.substring(0, 10),
-          endTime: session.endTime.substring(11, 16),
-          everyone: session.everyone,
-          groups: session.groupIds.map(id => String(id)),
-          link: session.link,
-          location: session.location,
-        }}
-        validate={values => {
-          const errors = {}
+      {session.groupIds === undefined ? (
+        <LoadingScreen />
+      ) : (
+        <Formik
+          validateOnChange={true}
+          initialValues={{
+            title: session.title,
+            description: session.description,
+            startDate: session.startTime.substring(0, 10),
+            startTime: session.startTime.substring(11, 16),
+            endDate: session.endTime.substring(0, 10),
+            endTime: session.endTime.substring(11, 16),
+            everyone: session.everyone,
+            groups: session.groupIds.map(id => String(id)),
+            link: session.link,
+            location: session.location,
+          }}
+          validate={values => {
+            const errors = {}
 
-          if (!values.title.trim().length) errors.title = 'Title required.'
-          if (
-            !values.startDate ||
-            !values.startTime ||
-            !values.endDate ||
-            !values.endTime
-          )
-            errors.time = 'All time fields required.'
-          if (
-            new Date(`${values.startDate} ${values.startTime}`) -
-              new Date(`${values.endDate} ${values.endTime}`) >
-            0
-          )
-            errors.time =
-              "Your session's End Time needs to come after your Start Time."
-          if (!values.everyone && !values.groups.length)
-            errors.groups = 'Check who you want to attend the event.'
+            if (!values.title.trim().length) errors.title = 'Title required.'
+            if (
+              !values.startDate ||
+              !values.startTime ||
+              !values.endDate ||
+              !values.endTime
+            )
+              errors.time = 'All time fields required.'
+            if (
+              new Date(`${values.startDate} ${values.startTime}`) -
+                new Date(`${values.endDate} ${values.endTime}`) >
+              0
+            )
+              errors.time =
+                "Your session's End Time needs to come after your Start Time."
+            if (!values.everyone && !values.groups.length)
+              errors.groups = 'Check who you want to attend the event.'
 
-          return errors
-        }}
-        onSubmit={async (values, { setSubmitting }) => {
-          setSubmitting(true)
-          await getPHP('editSession', {
-            // eventId: event.id,
-            sessionId: session.id,
-            title: sanitize(values.title),
-            description: sanitize(values.description),
-            startTime: `${values.startDate} ${values.startTime}`,
-            endTime: `${values.endDate} ${values.endTime}`,
-            link: sanitize(values.link),
-            location: sanitize(values.location),
-            groups: values.groups.map(id => Number(id)),
-            // eslint-disable-next-line
-            everyone: values.everyone == 'true',
-          })
-          getAppData()
-          setSubmitting(false)
-          onHide()
-        }}
-      >
-        {({ values, errors, touched, isSubmitting, setFieldValue }) => {
-          return (
-            <Form className="m-3">
-              <h2>What</h2>
-              <FieldWithError name="title" placeholder="Title" />
-              <FieldWithError
-                name="description"
-                placeholder="Description (optional)"
-                as="textarea"
-              />
+            return errors
+          }}
+          onSubmit={async (values, { setSubmitting }) => {
+            setSubmitting(true)
+            await getPHP('editSession', {
+              // eventId: event.id,
+              sessionId: session.id,
+              title: sanitize(values.title),
+              description: sanitize(values.description),
+              startTime: `${values.startDate} ${values.startTime}`,
+              endTime: `${values.endDate} ${values.endTime}`,
+              link: sanitize(values.link),
+              location: sanitize(values.location),
+              groups: values.groups.map(id => Number(id)),
+              // eslint-disable-next-line
+              everyone: values.everyone == 'true',
+            })
+            window.location.reload()
+            setSubmitting(false)
+            onHide()
+          }}
+        >
+          {({ values, errors, touched, isSubmitting, setFieldValue }) => {
+            return (
+              <Form className="m-3">
+                <h2>What</h2>
+                <FieldWithError name="title" placeholder="Title" />
+                <FieldWithError
+                  name="description"
+                  placeholder="Description (optional)"
+                  as="textarea"
+                />
 
-              <h2>When</h2>
-              <FormBS.Group>
-                <strong>Start Time: </strong>
-                <Field
-                  name="startDate"
-                  type="date"
-                  style={{ width: '15rem' }}
-                  className="form-control d-inline"
-                />
-                <Field
-                  name="startTime"
-                  type="time"
-                  style={{ width: '15rem' }}
-                  className="form-control d-inline"
-                />
-              </FormBS.Group>
-              <FormBS.Group>
-                <strong>End Time: </strong>
-                <Field
-                  name="endDate"
-                  type="date"
-                  style={{ width: '15rem' }}
-                  className="form-control d-inline"
-                />
-                <Field
-                  name="endTime"
-                  type="time"
-                  style={{ width: '15rem' }}
-                  className="form-control d-inline"
-                />
-              </FormBS.Group>
-              {errors.time && <Alert variant="danger">{errors.time}</Alert>}
-
-              {hasGroup(event) && (
+                <h2>When</h2>
                 <FormBS.Group>
-                  <h2>Who</h2>
+                  <strong>Start Time: </strong>
                   <Field
-                    name="everyone"
-                    value="true"
-                    type="radio"
-                    as={FormBS.Check}
-                    label={<strong>Everyone</strong>}
-                    checked={values.everyone === 'true'}
+                    name="startDate"
+                    type="date"
+                    style={{ width: '15rem' }}
+                    className="form-control d-inline"
                   />
                   <Field
-                    name="everyone"
-                    value="false"
-                    type="radio"
-                    as={FormBS.Check}
-                    label={<strong>Specific Groups...</strong>}
-                    checked={values.everyone !== 'true'}
+                    name="startTime"
+                    type="time"
+                    style={{ width: '15rem' }}
+                    className="form-control d-inline"
                   />
-                  {values.everyone !== 'true' && (
-                    <>
-                      <FormBS.Check
-                        label="Check All Groups"
-                        onChange={e => {
-                          setFieldValue(
-                            'groups',
-                            e.target.checked ? Object.keys(event.groups) : []
-                          )
-                        }}
-                      />
-                      {Object.values(event.groups).map(group => {
-                        return (
-                          <Field
-                            key={group.id}
-                            name="groups"
-                            type="checkbox"
-                            value={group.id}
-                            label={group.title}
-                            as={FormBS.Check}
-                            checked={values.groups.includes(String(group.id))}
-                          />
-                        )
-                      })}
-                    </>
-                  )}
-                  {errors.groups && touched.groups && (
-                    <Alert variant="danger">{errors.groups}</Alert>
-                  )}
                 </FormBS.Group>
-              )}
+                <FormBS.Group>
+                  <strong>End Time: </strong>
+                  <Field
+                    name="endDate"
+                    type="date"
+                    style={{ width: '15rem' }}
+                    className="form-control d-inline"
+                  />
+                  <Field
+                    name="endTime"
+                    type="time"
+                    style={{ width: '15rem' }}
+                    className="form-control d-inline"
+                  />
+                </FormBS.Group>
+                {errors.time && <Alert variant="danger">{errors.time}</Alert>}
 
-              <h2>Where</h2>
-              <FieldWithError
-                name="link"
-                placeholder="Invite Link (optional)"
-              />
-              <FieldWithError
-                name="location"
-                placeholder="Physical Location (optional)"
-              />
+                {hasGroup(event) && (
+                  <FormBS.Group>
+                    <h2>Who</h2>
+                    <Field
+                      name="everyone"
+                      value="true"
+                      type="radio"
+                      as={FormBS.Check}
+                      label={<strong>Everyone</strong>}
+                      checked={values.everyone === 'true'}
+                    />
+                    <Field
+                      name="everyone"
+                      value="false"
+                      type="radio"
+                      as={FormBS.Check}
+                      label={<strong>Specific Groups...</strong>}
+                      checked={values.everyone !== 'true'}
+                    />
+                    {values.everyone !== 'true' && (
+                      <>
+                        <FormBS.Check
+                          label="Check All Groups"
+                          onChange={e => {
+                            setFieldValue(
+                              'groups',
+                              e.target.checked ? Object.keys(event.groups) : []
+                            )
+                          }}
+                        />
+                        {Object.values(event.groups).map(group => {
+                          return (
+                            <Field
+                              key={group.id}
+                              name="groups"
+                              type="checkbox"
+                              value={group.id}
+                              label={group.title}
+                              as={FormBS.Check}
+                              checked={values.groups.includes(String(group.id))}
+                            />
+                          )
+                        })}
+                      </>
+                    )}
+                    {errors.groups && touched.groups && (
+                      <Alert variant="danger">{errors.groups}</Alert>
+                    )}
+                  </FormBS.Group>
+                )}
 
-              <Modal.Footer>
-                <Button onClick={onHide} variant="secondary">
-                  Cancel
-                </Button>
-                <Button disabled={isSubmitting} type="submit">
-                  Save changes{' '}
-                  {isSubmitting && (
-                    <Spinner animation="border" variant="light" />
-                  )}
-                </Button>
-              </Modal.Footer>
-            </Form>
-          )
-        }}
-      </Formik>
+                <h2>Where</h2>
+                <FieldWithError
+                  name="link"
+                  placeholder="Invite Link (optional)"
+                />
+                <FieldWithError
+                  name="location"
+                  placeholder="Physical Location (optional)"
+                />
+
+                <Modal.Footer>
+                  <Button onClick={onHide} variant="secondary">
+                    Cancel
+                  </Button>
+                  <Button disabled={isSubmitting} type="submit">
+                    Save changes
+                    {isSubmitting && (
+                      <Spinner animation="border" variant="light" />
+                    )}
+                  </Button>
+                </Modal.Footer>
+              </Form>
+            )
+          }}
+        </Formik>
+      )}
     </Modal>
   )
 }
 
-function NewSessionModal({ onHide, event, appUserEmail }) {
+function NewSessionModal({ show, onHide, event, appUserEmail }) {
   const titleField = useRef(null)
   const [showSpinner, setShowSpinner] = useState(false)
   const [title, setTitle] = useState('')
@@ -425,11 +497,11 @@ function NewSessionModal({ onHide, event, appUserEmail }) {
   const [location, setLocation] = useState('')
 
   useEffect(() => {
-    if (titleField) titleField.current.focus()
+    if (titleField.current) titleField.current.focus()
   }, [titleField])
 
   return (
-    <Modal show={true} onHide={onHide} backdrop="static" size="lg">
+    <Modal show={show} onHide={onHide} backdrop="static" size="lg">
       <Modal.Header closeButton>
         <h4>Create New Session</h4>
       </Modal.Header>
@@ -583,7 +655,7 @@ function NewSessionModal({ onHide, event, appUserEmail }) {
                 groups: groups,
                 everyone,
               })
-              getAppData()
+              window.location.reload()
               onHide()
             }
           }}

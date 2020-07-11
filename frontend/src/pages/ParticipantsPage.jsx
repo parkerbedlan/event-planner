@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef, useEffect } from 'react'
 import Cookies from 'universal-cookie'
 import styled from 'styled-components'
 
@@ -11,22 +11,27 @@ const Styles = styled.div`
 `
 
 export default function ParticipantsPage({ appUser }) {
-  const currentEventId = cookies.get('currentEventId')
-  if (!currentEventId) window.location.href = '../'
+  const event = useRef(null)
+  useEffect(() => {
+    const currentEventId = cookies.get('currentEventId')
+    if (!currentEventId) window.location.href = '../'
+    event.current = appUser.adminEvents[currentEventId]
+  }, [appUser.adminEvents])
 
   return (
     <Styles>
       <h1>Participants</h1>
-      {Object.values(appUser.adminEvents[currentEventId].participants).map(
-        participant => (
-          <h3 key={participant.emailAddr}>
-            {participant.emailAddr}
-            {participant.firstName
-              ? ' - ' + participant.firstName + ' ' + participant.lastName
-              : ''}
-          </h3>
-        )
-      )}
+      {!!event.current &&
+        Object.values(appUser.adminEvents[event.current.id].participants).map(
+          participant => (
+            <h3 key={participant.emailAddr}>
+              {participant.emailAddr}
+              {participant.firstName
+                ? ' - ' + participant.firstName + ' ' + participant.lastName
+                : ''}
+            </h3>
+          )
+        )}
     </Styles>
   )
 }

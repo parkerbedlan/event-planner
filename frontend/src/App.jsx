@@ -1,9 +1,9 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 import { Auth0Context } from './contexts/auth0-context'
-import styled from 'styled-components'
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
 
 import Layout from './components/Layout'
+import { LoadingScreen } from './components/LoadingScreen'
 import LoginPage from './pages/LoginPage'
 import VerificationPage from './pages/VerificationPage'
 import NoMatchPage from './pages/NoMatchPage'
@@ -12,106 +12,39 @@ import SessionsPage from './pages/SessionsPage'
 import AdminsPage from './pages/AdminsPage'
 import ParticipantsPage from './pages/ParticipantsPage'
 
-import AppUser from './classes/AppUser'
-import { getPHP } from './phpHelper'
 import NavigationBar from './components/NavigationBar'
 
-const LoadingScreen = styled.div`
-  width: 100%;
-  height: 100vh;
-  background: url(${require('./images/loading.gif')}) center center no-repeat;
-`
-
-let appUserEmailAddr
-let appState
-let appSetState
-export async function getAppData() {
-  appSetState({ ...appState, updated: false })
-  const appUser = await AppUser.fetch(appUserEmailAddr)
-  await getPHP('setCache', {
-    emailAddr: appUserEmailAddr,
-    jsonData: JSON.stringify(appUser),
-  })
-  appSetState({
-    isLoading: false,
-    updated: true,
-    appUser,
-  })
-}
-
-export const AppState = React.createContext()
+export const AppUser = React.createContext()
 
 function App() {
   const { isAuthLoading, user } = useContext(Auth0Context)
-  const [state, setState] = useState({})
-
-  appState = state
-  appSetState = setState
-
+  const [appUser, setAppUser] = useState({ emailAddr: null })
   useEffect(() => {
-    if (user && user.email_verified) {
-      appUserEmailAddr = user.email
-
-      setState({ isLoading: true })
-      async function f() {
-        let appUserCached
-        try {
-          appUserCached = JSON.parse(
-            await getPHP('getCache', {
-              emailAddr: user.email,
-            })
-          )
-        } catch {
-          try {
-            await getAppData()
-            return
-          } catch {
-            setState({ isLoading: false })
-            return alert('Failed to connect to server :(')
-          }
-        }
-        appUserCached.profilePic = await getPHP(
-          'getProfilePic',
-          { emailAddr: user.email },
-          'blob'
-        )
-        setState({
-          isLoading: false,
-          updated: false,
-          appUser: appUserCached,
-        })
-        await getAppData()
-      }
-      f()
-    }
+    if (user) setAppUser({ emailAddr: user.email })
   }, [user])
 
-  useEffect(() => {
-    if (state.updated) console.log('updated')
-  }, [state.updated])
-
   return (
-    <AppState.Provider value={{ state, setState }}>
+    <AppUser.Provider value={{ appUser, setAppUser }}>
       <Layout>
-        {(isAuthLoading || state.isLoading) && <LoadingScreen />}
+        {isAuthLoading && <LoadingScreen />}
         {!isAuthLoading && !user && <LoginPage />}
         {!isAuthLoading && user && !user.email_verified && <VerificationPage />}
-        {!isAuthLoading && user && user.email_verified && state.appUser && (
+        {!isAuthLoading && user && user.email_verified && (
           <>
-            <NavigationBar updated={state.updated} appUser={state.appUser} />
+            <NavigationBar />
             <Router>
               <Switch>
                 <Route exact path="/">
-                  <EventsPage appUser={state.appUser} />
+                  <EventsPage />
                 </Route>
                 <Route path="/sessions">
-                  <SessionsPage appUser={state.appUser} />
+                  <SessionsPage />
                 </Route>
                 <Route path="/admins">
-                  <AdminsPage appUser={state.appUser} />
+                  <AdminsPage />
                 </Route>
                 <Route path="/participants">
-                  <ParticipantsPage appUser={state.appUser} />
+                  <ParticipantsPage />
                 </Route>
                 <Route component={NoMatchPage} />
               </Switch>
@@ -119,9 +52,8 @@ function App() {
             <br />
           </>
         )}
-        {/* <pre>{JSON.stringify(state, null, 2)}</pre> */}
       </Layout>
-    </AppState.Provider>
+    </AppUser.Provider>
   )
 }
 

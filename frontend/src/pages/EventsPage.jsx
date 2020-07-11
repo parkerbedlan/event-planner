@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useContext } from 'react'
 import {
   Toast,
   Card,
@@ -11,10 +11,11 @@ import {
 import styled from 'styled-components'
 import Cookies from 'universal-cookie'
 import { getPHP, sanitize, isEmail } from '../phpHelper'
-import { getAppData } from '../App'
 import { Formik, Form } from 'formik'
 import { FieldWithError } from '../components/FieldWithError'
 import * as yup from 'yup'
+import { AppUser } from '../App'
+import { LoadingScreen } from '../components/LoadingScreen'
 
 const cookies = new Cookies()
 
@@ -25,48 +26,54 @@ const Styles = styled.div`
   }
 `
 
-export default function EventsPage({ appUser }) {
-  cookies.remove('currentEventId')
-  const [showParticipantEvents, setShowParticipantEvents] = useState([])
+export default function EventsPage() {
+  const { appUser } = useContext(AppUser)
 
-  return (
+  const [isLoading, setLoading] = useState(true)
+  const [ownedEventIds, setOwnedEventIds] = useState()
+  const [participantEvents, setParticipantEvents] = useState()
+  useEffect(() => {
+    if (!appUser.emailAddr) return
+    cookies.remove('currentEventId')
+    async function f() {
+      setOwnedEventIds(
+        await getPHP('getUserOwnerEventIds', { emailAddr: appUser.emailAddr })
+      )
+      setParticipantEvents(
+        await getPHP('getParticipantEventTitles', {
+          emailAddr: appUser.emailAddr,
+        })
+      )
+      await setLoading(false)
+    }
+    f()
+  }, [appUser.emailAddr])
+
+  return isLoading ? (
+    <LoadingScreen />
+  ) : (
     <Styles>
       <h1>Admin Events</h1>
-      {Object.values(appUser.adminEvents).map(event => {
-        return (
-          <EventCard
-            key={event.id}
-            event={event}
-            onClick={() => {
-              cookies.set('currentEventId', event.id)
-              window.location.href = '/sessions'
-            }}
-            isOwner={appUser.ownedEventIds.includes(event.id)}
-          />
-        )
-      })}
+      {!!appUser.adminEvents &&
+        appUser.adminEvents.map(event => {
+          return (
+            <EventCard
+              key={event.id}
+              event={event}
+              onClick={() => {
+                cookies.set('currentEventId', event.id)
+                window.location.href = '/sessions'
+              }}
+              isOwner={ownedEventIds.includes(Number(event.id))}
+            />
+          )
+        })}
       <CreateEventCard appUserEmail={appUser.emailAddr} />
       <hr />
       <h1>Participant Events</h1>
-      {Object.values(appUser.participantEvents).length ? (
-        Object.values(appUser.participantEvents).map(event => (
-          <React.Fragment key={event.id}>
-            <EventCard
-              event={event}
-              onClick={() => {
-                setShowParticipantEvents([...showParticipantEvents, event.id])
-              }}
-            />
-            <ParticipantEventModal
-              event={event}
-              show={showParticipantEvents.includes(event.id)}
-              onHide={() =>
-                setShowParticipantEvents(
-                  showParticipantEvents.filter(p => p !== event.id)
-                )
-              }
-            />
-          </React.Fragment>
+      {Object.values(participantEvents).length ? (
+        participantEvents.map(event => (
+          <ParticipantEventCard key={event.id} event={event} />
         ))
       ) : (
         <>
@@ -74,27 +81,63 @@ export default function EventsPage({ appUser }) {
           <h3>None</h3>
         </>
       )}
-      <NoEventsToast appUser={appUser} />
+      <NoEventsToast
+        adminEvents={appUser.adminEvents}
+        participantEvents={participantEvents}
+      />
     </Styles>
   )
 }
 
+function ParticipantEventCard({ event }) {
+  const [showModal, setShowModal] = useState(false)
+  return (
+    <>
+      <EventCard event={event} onClick={() => setShowModal(true)} />
+      <ParticipantEventModal
+        event={event}
+        show={showModal}
+        onHide={() => setShowModal(false)}
+      />
+    </>
+  )
+}
+
 function ParticipantEventModal({ event, show, onHide }) {
+  const {
+    appUser: { emailAddr },
+  } = useContext(AppUser)
+  const [isLoading, setLoading] = useState(true)
+  const [schedule, setSchedule] = useState()
+  useEffect(() => {
+    async function f() {
+      setSchedule(
+        await getPHP('getUserEventSessions', { emailAddr, eventId: event.id })
+      )
+      await setLoading(false)
+    }
+    f()
+  }, [emailAddr, event.id])
+
   return (
     <Modal show={show} onHide={onHide} size="lg">
       <Modal.Header closeButton>
         <h4>Your Schedule</h4>
       </Modal.Header>
-      <div className="m-3">
-        <h2>{event.title}</h2>
-        {event.schedule.map(session => {
-          return (
-            <h3>
-              {session.startTime} - {session.title}
-            </h3>
-          )
-        })}
-      </div>
+      {isLoading ? (
+        <LoadingScreen />
+      ) : (
+        <div className="m-3">
+          <h2>{event.title}</h2>
+          {schedule.map(session => {
+            return (
+              <h3 key={session.id}>
+                {session.startTime} - {session.title}
+              </h3>
+            )
+          })}
+        </div>
+      )}
     </Modal>
   )
 }
@@ -123,7 +166,7 @@ function EventCard({ event, onClick, isOwner }) {
                 await getPHP('removeEvent', {
                   eventId: event.id,
                 })
-                getAppData()
+                window.location.reload()
               }
             } else onClick()
           }}
@@ -177,7 +220,7 @@ function RenameModal({ event, onHide }) {
             newShortTitle: sanitize(values.shortTitle),
             eventId: event.id,
           })
-          getAppData()
+          window.location.reload()
           setSubmitting(false)
           onHide()
         }}
@@ -268,7 +311,7 @@ function CreateEventCard({ appUserEmail }) {
                 setTitle(e.target.value)
               }}
               placeholder="Event Title"
-              maxlength="63"
+              maxLength="63"
             />
           </FormBS.Group>
           {title.trim().length > 24 && (
@@ -290,7 +333,7 @@ function CreateEventCard({ appUserEmail }) {
                   )
                 }
                 placeholder="Short Title"
-                maxlength="24"
+                maxLength="24"
               />
               <FormBS.Text className="text-muted">
                 <strong>{24 - shortTitle.trim().length}</strong> characters left
@@ -446,7 +489,7 @@ function CreateEventCard({ appUserEmail }) {
                   adminList,
                   participantList,
                 })
-                getAppData()
+                window.location.reload()
                 setShow(false)
                 clearAllFields()
               }
@@ -461,8 +504,11 @@ function CreateEventCard({ appUserEmail }) {
   )
 }
 
-function NoEventsToast({ appUser }) {
-  const [showToast, setShowToast] = useState(!hasEvent(appUser))
+function NoEventsToast({ adminEvents, participantEvents }) {
+  const [showToast, setShowToast] = useState(false)
+  useEffect(() => {
+    setShowToast(!hasEvent(adminEvents, participantEvents))
+  }, [adminEvents, participantEvents])
   return (
     <Toast
       show={showToast}
@@ -488,8 +534,8 @@ function NoEventsToast({ appUser }) {
   )
 }
 
-const hasEvent = appUser => {
-  for (const key in appUser.adminEvents) return true
-  for (const key in appUser.participantEvents) return true
+const hasEvent = (adminEvents, participantEvents) => {
+  for (const key in adminEvents) return true
+  for (const key in participantEvents) return true
   return false
 }
