@@ -30,6 +30,7 @@ export default function AdminsPage() {
   const {
     appUser: { emailAddr },
   } = useContext(AppUser)
+  const [showAdd, setShowAdd] = useState(false)
   const [isLoading, setLoading] = useState(true)
   const [isOwner, setOwner] = useState()
   const [event, setEvent] = useState()
@@ -62,7 +63,11 @@ export default function AdminsPage() {
   ) : (
     <Styles>
       <h1 className="m-3 d-inline">Admins</h1>
-      <Button disabled onClick={() => {}} variant="secondary" className="m-3">
+      <Button
+        onClick={() => setShowAdd(true)}
+        variant="secondary"
+        className="m-3"
+      >
         Add Admin
       </Button>
       <hr />
@@ -75,7 +80,58 @@ export default function AdminsPage() {
           isOwner={isOwner}
         />
       ))}
+      <AddUserModal
+        show={showAdd}
+        onHide={() => setShowAdd(false)}
+        eventId={event.id}
+        isAdmin={true}
+      />
     </Styles>
+  )
+}
+
+function AddUserModal({ show, onHide, eventId, isAdmin }) {
+  return (
+    <Modal show={show} onHide={onHide}>
+      <Modal.Header closeButton>
+        <h4>Add Admin</h4>
+      </Modal.Header>
+      <Formik
+        initialValues={{ newEmail: '' }}
+        onSubmit={async (values, { setSubmitting }) => {
+          setSubmitting(true)
+
+          await getPHP('addUserToEvent', {
+            emailAddr: values.newEmail,
+            isAdmin,
+            eventId,
+          })
+          window.location.reload()
+
+          setSubmitting(false)
+          onHide()
+        }}
+      >
+        {({ isSubmitting }) => (
+          <Form className="m-3">
+            <FieldWithError
+              name="newEmail"
+              placeholder="Email Address of New User"
+              type="email"
+            />
+            <Modal.Footer>
+              <Button variant="secondary" onClick={onHide}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                Add User
+                {isSubmitting && <Spinner animation="border" variant="light" />}
+              </Button>
+            </Modal.Footer>
+          </Form>
+        )}
+      </Formik>
+    </Modal>
   )
 }
 

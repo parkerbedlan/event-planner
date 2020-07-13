@@ -562,3 +562,25 @@ function removeUserFromEvent() {
 
   return json_encode("deleted user from event");
 }
+
+function addUserToEvent() {
+  $db = $GLOBALS['db'];
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $eventId= (int)json_decode($_POST['eventId']);
+  $isAdmin = (int)json_decode($_POST['isAdmin']);
+  
+  $userExists = (boolean)$db->query("SELECT 1 FROM Users WHERE emailAddr='$emailAddr'")->num_rows;
+  if(!$userExists) {
+    $db->query("INSERT INTO Users (emailAddr, isActivated) VALUES ('$emailAddr', 0)");
+  }
+
+  $userIsInEvent = $db->query("SELECT 1 FROM Events_Users WHERE emailAddr='$emailAddr' AND eventId=$eventId")->num_rows;
+  if(!$userIsInEvent) {
+    $db->query("INSERT INTO Events_Users VALUES ($eventId, '$emailAddr', $isAdmin, 0)");
+  }
+  else {
+    $db->query("UPDATE Events_Users SET isAdmin=$isAdmin, isOwner=0 WHERE emailAddr='$emailAddr' AND eventId=$eventId");
+  }
+
+  return json_encode("added user to event");
+}
