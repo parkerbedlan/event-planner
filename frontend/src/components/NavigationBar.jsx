@@ -60,7 +60,7 @@ export default function NavigationBar() {
         {!isLoading &&
           (window.location.pathname !== '/' ? (
             <>
-              {Boolean(appUser.adminEvents) && (
+              {!!appUser.adminEvents && (
                 <Nav className="mr-auto">
                   <EventDropdown adminEvents={appUser.adminEvents} />
                 </Nav>
@@ -141,7 +141,7 @@ function ProfileDropdown({ appUser }) {
         title={
           <Image
             src={
-              Boolean(appUser.profilePic)
+              !!appUser.profilePic
                 ? blobToUrl(appUser.profilePic)
                 : require('../images/profilePlaceholder.png')
             }
@@ -233,7 +233,7 @@ function EditProfileModal({ show, setShow, appUser }) {
           <br />
           <Image
             src={
-              Boolean(profilePic)
+              !!profilePic
                 ? blobToUrl(profilePic)
                 : require('../images/profilePlaceholder.png')
             }

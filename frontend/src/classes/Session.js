@@ -30,15 +30,15 @@ export default class Session {
     const groupIds = await getPHP('getSessionGroupIds', { sessionId })
 
     return new Session(
-      Number(sessionData.id),
-      Number(sessionData.eventId),
+      +sessionData.id,
+      +sessionData.eventId,
       sessionData.title,
       sessionData.description,
       sessionData.startTime,
       sessionData.endTime,
       sessionData.link,
       sessionData.location,
-      Boolean(Number(sessionData.everyone)),
+      !!+sessionData.everyone,
       groupIds
     )
   }

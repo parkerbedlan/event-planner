@@ -30,7 +30,6 @@ export async function getPHP(
       formData.append(key, JSON.stringify(options[key]))
     else if (requestFormat === 'raw') formData.append(key, options[key])
   }
-  // console.log(methodName)
   await fetch('http://localhost/event-planner/backend/requestHandler.php', {
     method: 'POST',
     headers: {},

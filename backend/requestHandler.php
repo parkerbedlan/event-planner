@@ -261,21 +261,6 @@ function addEvent() {
   return json_encode("added event to database");
 }
 
-function editUser() {
-  $db = $GLOBALS['db'];
-  $emailAddr = $_POST['emailAddr'];
-  $firstName = $_POST['firstName'];
-  $lastName = $_POST['lastName'];
-  updateUser($emailAddr, $firstName, $lastName);
-  
-  if (count($_FILES)) {
-    $profilePicture = file_get_contents($_FILES['profilePicture']['tmp_name']);
-    fwrite(fopen("profilePictures/$emailAddr.png","wb"),$profilePicture);
-  }
-  
-  return json_encode("updated user");
-}
-
 function getUserEventGroups() {
   $emailAddr = json_decode($_POST['emailAddr']);
   $eventId = json_decode($_POST['eventId']);
@@ -542,4 +527,38 @@ function getEventGroups() {
 
   return $output;
 
+}
+
+function editUser() {
+  $db = $GLOBALS['db'];
+  $emailAddr = $_POST['emailAddr'];
+  $firstName = $_POST['firstName'];
+  $lastName = $_POST['lastName'];
+  updateUser($emailAddr, $firstName, $lastName);
+  
+  if (count($_FILES)) {
+    $profilePicture = file_get_contents($_FILES['profilePicture']['tmp_name']);
+    fwrite(fopen("profilePictures/$emailAddr.png","wb"),$profilePicture);
+  }
+
+  if (isset($_POST['groupIds']) && $_POST['groupIds'] != 'null') {
+    $isAdmin = (int)$_POST['isAdmin'];
+    $groupIds = json_decode($_POST['groupIds']);
+    $db->query("DELETE FROM Groups_Users WHERE emailAddr='$emailAddr'");
+    for ($i = 0; $i < count($groupIds); $i++) {
+      $groupId = $groupIds[$i];
+      $db->query("INSERT INTO Groups_Users VALUES ($groupId, '$emailAddr', $isAdmin);");
+    }
+  }
+  
+  return json_encode("updated user");
+}
+
+function removeUserFromEvent() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $eventId = json_decode($_POST['eventId']);
+
+  $GLOBALS['db']->query("DELETE FROM Events_Users WHERE emailAddr='$emailAddr' AND eventId=$eventId");
+
+  return json_encode("deleted user from event");
 }

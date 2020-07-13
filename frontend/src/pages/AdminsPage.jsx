@@ -1,10 +1,22 @@
 import React, { useState, useEffect, useContext } from 'react'
 import Cookies from 'universal-cookie'
 import styled from 'styled-components'
-import { Card, Row, Button, Modal, Image } from 'react-bootstrap'
-import { blobToUrl, getPHP } from '../phpHelper'
+import {
+  Card,
+  Row,
+  Button,
+  Modal,
+  Image,
+  Form as FormBS,
+  Spinner,
+} from 'react-bootstrap'
+import { blobToUrl, getPHP, sanitize } from '../phpHelper'
 import { LoadingScreen } from '../components/LoadingScreen'
 import { AppUser } from '../App'
+import { Formik, Form, Field } from 'formik'
+import { FieldWithError } from '../components/FieldWithError'
+import { ProfilePicField } from '../components/ProfilePicField'
+// import * as yup from 'yup'
 
 const cookies = new Cookies()
 
@@ -21,7 +33,6 @@ export default function AdminsPage() {
   const [isLoading, setLoading] = useState(true)
   const [isOwner, setOwner] = useState()
   const [event, setEvent] = useState()
-
   useEffect(() => {
     if (!emailAddr) return
     async function f() {
@@ -71,53 +82,185 @@ export default function AdminsPage() {
 function UserCard({ user, event, isOwner }) {
   const [userDetails, setUserDetails] = useState()
   const [showDetails, setShowDetails] = useState(false)
-
-  useEffect(() => {
-    console.log(userDetails)
-  }, [userDetails])
+  const [showEdit, setShowEdit] = useState(false)
+  const [isDeleting, setDeleting] = useState(false)
 
   return (
-    <>
-      <Card className="mt">
-        <Row>
-          <div className="my-auto ml-4 mr-auto">
-            <strong>{user.emailAddr}</strong>
-            {(user.firstName || user.lastName) && <br />}
-            {user.firstName && ' ' + user.firstName}
-            {user.lastName && ' ' + user.lastName}
-          </div>
-          <div className="my-auto mr-4 ml-auto">
-            <Button
-              onClick={() => {
-                setShowDetails(true)
-              }}
-              variant="secondary"
-              className="m-2"
-            >
-              Details
-            </Button>
-            {isOwner && (
-              <>
-                <Button disabled variant="info" className="m-2">
-                  Edit
-                </Button>
-                <Button disabled variant="danger" className="m-2">
-                  Delete
-                </Button>
-              </>
-            )}
-          </div>
-        </Row>
-      </Card>
+    !isDeleting && (
+      <>
+        <Card className="mt">
+          <Row>
+            <div className="my-auto ml-4 mr-auto">
+              <strong>{user.emailAddr}</strong>
+              {(user.firstName || user.lastName) && <br />}
+              {user.firstName && ' ' + user.firstName}
+              {user.lastName && ' ' + user.lastName}
+            </div>
+            <div className="my-auto mr-4 ml-auto">
+              <Button
+                onClick={() => {
+                  setShowDetails(true)
+                }}
+                variant="secondary"
+                className="m-2"
+              >
+                Details
+              </Button>
+              {isOwner && (
+                <>
+                  <Button
+                    onClick={() => setShowEdit(true)}
+                    variant="info"
+                    className="m-2"
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      if (
+                        window.confirm(
+                          `Are you sure you want to delete admin ${user.emailAddr}?`
+                        )
+                      ) {
+                        setDeleting(true)
+                        await getPHP('removeUserFromEvent', {
+                          emailAddr: user.emailAddr,
+                          eventId: event.id,
+                        })
+                        window.location.reload()
+                      }
+                    }}
+                    variant="danger"
+                    className="m-2"
+                  >
+                    Delete
+                  </Button>
+                </>
+              )}
+            </div>
+          </Row>
+        </Card>
 
-      <DetailsUserModal
-        onHide={() => setShowDetails(false)}
-        user={user}
-        event={event}
-        show={showDetails}
-        setUserDetails={setUserDetails}
-      />
-    </>
+        <DetailsUserModal
+          onHide={() => setShowDetails(false)}
+          user={user}
+          event={event}
+          show={showDetails}
+          setUserDetails={setUserDetails}
+        />
+
+        <EditUserModal
+          show={showEdit}
+          onHide={() => setShowEdit(false)}
+          user={user}
+          userDetails={userDetails}
+          event={event}
+        />
+      </>
+    )
+  )
+}
+
+function EditUserModal({ show, onHide, user, userDetails, event }) {
+  return (
+    <Modal show={show} onHide={onHide} size="lg" backdrop="static">
+      <Modal.Header closeButton>
+        <h4>Edit: {user.emailAddr}</h4>
+      </Modal.Header>
+      {userDetails === undefined ? (
+        <LoadingScreen />
+      ) : (
+        <Formik
+          initialValues={{
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            profilePic: userDetails.profilePic,
+            groups: userDetails.groupIds.map(id => '' + id),
+          }}
+          onSubmit={async (values, { setSubmitting }) => {
+            setSubmitting(true)
+
+            let groupChanged =
+              values.groups.length !== userDetails.groupIds.length
+            if (!groupChanged) {
+              for (const group1 of values.groups) {
+                if (
+                  !userDetails.groupIds.find(
+                    group2 => '' + group2 === '' + group1
+                  )
+                ) {
+                  groupChanged = true
+                  break
+                }
+              }
+            }
+
+            await getPHP(
+              'editUser',
+              {
+                emailAddr: user.emailAddr,
+                firstName: sanitize(values.firstName),
+                lastName: sanitize(values.lastName),
+                profilePicture:
+                  values.profilePic !== userDetails.profilePic
+                    ? values.profilePic
+                    : null,
+                groupIds: groupChanged
+                  ? JSON.stringify(values.groups.map(id => +id))
+                  : null,
+                isAdmin: true,
+              },
+              'json',
+              'raw'
+            )
+
+            window.location.reload()
+            setSubmitting(false)
+            onHide()
+          }}
+        >
+          {({ values, isSubmitting }) => {
+            return (
+              <Form className="m-3">
+                <FieldWithError name="firstName" placeholder="First Name" />
+                <FieldWithError name="lastName" placeholder="Last Name" />
+                <ProfilePicField
+                  name="profilePic"
+                  placeholder={require('../images/profilePlaceholder.png')}
+                />
+                {event.groups.length && (
+                  <FormBS.Group>
+                    <FormBS.Label>Group Memberships</FormBS.Label>
+                    {event.groups.map(group => (
+                      <Field
+                        key={group.id}
+                        name="groups"
+                        type="checkbox"
+                        value={'' + group.id}
+                        as={FormBS.Check}
+                        label={group.title}
+                      />
+                    ))}
+                  </FormBS.Group>
+                )}
+                <pre>{JSON.stringify(values, null, 2)}</pre>
+                <Modal.Footer>
+                  <Button variant="secondary" onClick={onHide}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    Submit
+                    {isSubmitting && (
+                      <Spinner animation="border" variant="light" />
+                    )}
+                  </Button>
+                </Modal.Footer>
+              </Form>
+            )
+          }}
+        </Formik>
+      )}
+    </Modal>
   )
 }
 
@@ -128,7 +271,6 @@ function DetailsUserModal({ show, onHide, user, event, setUserDetails }) {
 
   useEffect(() => {
     if (isLoading) {
-      console.log(user.emailAddr)
       async function f() {
         const picRequest = await getPHP(
           'getProfilePic',
@@ -195,8 +337,12 @@ function DetailsUserModal({ show, onHide, user, event, setUserDetails }) {
               !!groups.length ? (
                 <ul>
                   {groups.map(id => {
-                    if (Object.keys(event.groups).includes(String(id)))
-                      return <li key={id}>{event.groups[id].title}</li>
+                    if (event.groups.find(group => group.id === id))
+                      return (
+                        <li key={id}>
+                          {event.groups.find(group => group.id === id).title}
+                        </li>
+                      )
                     return null
                   })}
                 </ul>

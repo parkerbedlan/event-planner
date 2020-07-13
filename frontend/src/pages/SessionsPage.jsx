@@ -41,7 +41,7 @@ export default function SessionsPage() {
         eventId: currentEventId,
       })
       const eventRequest = await getPHP('getEventGroupsAndSize', {
-        eventId: Number(currentEventId),
+        eventId: +currentEventId,
       })
       setEvent({ ...eventRequest, sessions })
       await setLoading(false)
@@ -309,8 +309,8 @@ function EditSessionModal({ show, onHide, session, event }) {
             startTime: session.startTime.substring(11, 16),
             endDate: session.endTime.substring(0, 10),
             endTime: session.endTime.substring(11, 16),
-            everyone: session.everyone,
-            groups: session.groupIds.map(id => String(id)),
+            everyone: '' + session.everyone,
+            groups: session.groupIds.map(id => '' + id),
             link: session.link,
             location: session.location,
           }}
@@ -348,7 +348,7 @@ function EditSessionModal({ show, onHide, session, event }) {
               endTime: `${values.endDate} ${values.endTime}`,
               link: sanitize(values.link),
               location: sanitize(values.location),
-              groups: values.groups.map(id => Number(id)),
+              groups: values.groups.map(id => +id),
               // eslint-disable-next-line
               everyone: values.everyone == 'true',
             })
@@ -410,7 +410,6 @@ function EditSessionModal({ show, onHide, session, event }) {
                       type="radio"
                       as={FormBS.Check}
                       label={<strong>Everyone</strong>}
-                      checked={values.everyone === 'true'}
                     />
                     <Field
                       name="everyone"
@@ -418,7 +417,6 @@ function EditSessionModal({ show, onHide, session, event }) {
                       type="radio"
                       as={FormBS.Check}
                       label={<strong>Specific Groups...</strong>}
-                      checked={values.everyone !== 'true'}
                     />
                     {values.everyone !== 'true' && (
                       <>
@@ -427,23 +425,22 @@ function EditSessionModal({ show, onHide, session, event }) {
                           onChange={e => {
                             setFieldValue(
                               'groups',
-                              e.target.checked ? Object.keys(event.groups) : []
+                              e.target.checked
+                                ? event.groups.map(group => '' + group.id)
+                                : []
                             )
                           }}
                         />
-                        {Object.values(event.groups).map(group => {
-                          return (
-                            <Field
-                              key={group.id}
-                              name="groups"
-                              type="checkbox"
-                              value={group.id}
-                              label={group.title}
-                              as={FormBS.Check}
-                              checked={values.groups.includes(String(group.id))}
-                            />
-                          )
-                        })}
+                        {event.groups.map(group => (
+                          <Field
+                            key={group.id}
+                            name="groups"
+                            type="checkbox"
+                            value={'' + group.id}
+                            label={group.title}
+                            as={FormBS.Check}
+                          />
+                        ))}
                       </>
                     )}
                     {errors.groups && touched.groups && (
@@ -541,7 +538,7 @@ function NewSessionModal({ show, onHide, event, appUserEmail }) {
             onChange={e => {
               setStartTime(e.target.value)
               const [hr, min] = e.target.value.split(':')
-              setEndTime(((Number(hr) + 1) % 24) + ':' + min)
+              setEndTime(((+hr + 1) % 24) + ':' + min)
             }}
             style={{ display: 'inline', width: '15rem' }}
           />
@@ -583,7 +580,7 @@ function NewSessionModal({ show, onHide, event, appUserEmail }) {
                 <FormBS.Check
                   onChange={e => {
                     if (e.target.checked)
-                      setGroups(Object.keys(event.groups).map(id => Number(id)))
+                      setGroups(Object.keys(event.groups).map(id => +id))
                     else setGroups([])
                   }}
                   label="Check All Groups"

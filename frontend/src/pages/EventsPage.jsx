@@ -64,7 +64,7 @@ export default function EventsPage() {
                 cookies.set('currentEventId', event.id)
                 window.location.href = '/sessions'
               }}
-              isOwner={ownedEventIds.includes(Number(event.id))}
+              isOwner={ownedEventIds.includes(+event.id)}
             />
           )
         })}

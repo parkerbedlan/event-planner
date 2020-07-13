@@ -16,7 +16,7 @@ export default class Group {
     const memberEmails = await getPHP('getGroupMemberEmails', { groupId })
     const sessionIds = await getPHP('getGroupSessionIds', { groupId })
     return new Group(
-      Number(groupData.id),
+      +groupData.id,
       groupData.eventId,
       groupData.title,
       leaderEmails,
