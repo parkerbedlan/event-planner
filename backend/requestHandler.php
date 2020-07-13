@@ -78,7 +78,23 @@ function getParticipants() {
   WHERE eventId=$id AND isAdmin=0";
   $result = $GLOBALS['db']->query($query);
   $all_results = [];
-  for ($i = 0; $i < $result->num_rows; $i ++) {
+  for ($i = 0; $i < $result->num_rows; $i++) {
+    $userObj = $result->fetch_object();
+    array_push($all_results, $userObj);
+  }
+  return json_encode($all_results);
+}
+
+function getUsers() {
+  $id = $_POST['eventId'];
+  $isAdmin = (int)json_decode($_POST['isAdmin']);
+  $query = "SELECT Events_Users.emailAddr, Users.firstName, Users.lastName FROM Events_Users 
+  INNER JOIN Users
+  ON Events_users.emailAddr=Users.emailAddr
+  WHERE eventId=$id AND isAdmin=$isAdmin";
+  $result = $GLOBALS['db']->query($query);
+  $all_results = [];
+  for ($i = 0; $i < $result->num_rows; $i++) {
     $userObj = $result->fetch_object();
     array_push($all_results, $userObj);
   }

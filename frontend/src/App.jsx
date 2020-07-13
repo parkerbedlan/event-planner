@@ -9,8 +9,7 @@ import VerificationPage from './pages/VerificationPage'
 import NoMatchPage from './pages/NoMatchPage'
 import EventsPage from './pages/EventsPage'
 import SessionsPage from './pages/SessionsPage'
-import AdminsPage from './pages/AdminsPage'
-import ParticipantsPage from './pages/ParticipantsPage'
+import UsersPage from './pages/UsersPage'
 
 import NavigationBar from './components/NavigationBar'
 
@@ -41,10 +40,10 @@ function App() {
                   <SessionsPage />
                 </Route>
                 <Route path="/admins">
-                  <AdminsPage />
+                  <UsersPage isAdmin={true} />
                 </Route>
                 <Route path="/participants">
-                  <ParticipantsPage />
+                  <UsersPage isAdmin={false} />
                 </Route>
                 <Route component={NoMatchPage} />
               </Switch>

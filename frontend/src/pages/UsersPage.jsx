@@ -16,7 +16,6 @@ import { AppUser } from '../App'
 import { Formik, Form, Field } from 'formik'
 import { FieldWithError } from '../components/FieldWithError'
 import { ProfilePicField } from '../components/ProfilePicField'
-// import * as yup from 'yup'
 
 const cookies = new Cookies()
 
@@ -26,13 +25,13 @@ const Styles = styled.div`
   }
 `
 
-export default function AdminsPage() {
+export default function UsersPage({ isAdmin }) {
   const {
     appUser: { emailAddr },
   } = useContext(AppUser)
   const [showAdd, setShowAdd] = useState(false)
   const [isLoading, setLoading] = useState(true)
-  const [isOwner, setOwner] = useState()
+  const [appUserIsOwner, setAppUserOwner] = useState()
   const [event, setEvent] = useState()
   useEffect(() => {
     if (!emailAddr) return
@@ -40,51 +39,54 @@ export default function AdminsPage() {
       const currentEventId = cookies.get('currentEventId')
       if (!currentEventId) window.location.href = '../'
 
-      setOwner(
+      setAppUserOwner(
         await getPHP('isOwner', {
           emailAddr,
           eventId: currentEventId,
         })
       )
 
-      const admins = await getPHP('getAdmins', { eventId: currentEventId })
+      const usersOnPage = await getPHP('getUsers', {
+        eventId: currentEventId,
+        isAdmin,
+      })
 
       const event = await getPHP('getEventGroups', { eventId: currentEventId })
 
-      setEvent({ ...event, admins })
+      setEvent({ ...event, usersOnPage })
 
       await setLoading(false)
     }
     f()
-  }, [emailAddr])
+  }, [emailAddr, isAdmin])
 
   return isLoading ? (
     <LoadingScreen />
   ) : (
     <Styles>
-      <h1 className="m-3 d-inline">Admins</h1>
+      <h1 className="m-3 d-inline">{isAdmin ? 'Admin' : 'Participant'}s</h1>
       <Button
         onClick={() => setShowAdd(true)}
         variant="secondary"
         className="m-3"
       >
-        Add Admin
+        Add {isAdmin ? 'Admin' : 'Participant'}
       </Button>
       <hr />
-      {event.admins.map(admin => (
+      {event.usersOnPage.map(user => (
         <UserCard
-          key={admin.emailAddr}
-          user={admin}
+          key={user.emailAddr}
+          user={user}
           event={event}
-          isAdmin={true}
-          isOwner={isOwner}
+          isAdmin={isAdmin}
+          appUserIsOwner={appUserIsOwner}
         />
       ))}
       <AddUserModal
         show={showAdd}
         onHide={() => setShowAdd(false)}
         eventId={event.id}
-        isAdmin={true}
+        isAdmin={isAdmin}
       />
     </Styles>
   )
@@ -94,7 +96,7 @@ function AddUserModal({ show, onHide, eventId, isAdmin }) {
   return (
     <Modal show={show} onHide={onHide}>
       <Modal.Header closeButton>
-        <h4>Add Admin</h4>
+        <h4>Add {isAdmin ? 'Admin' : 'Participant'}</h4>
       </Modal.Header>
       <Formik
         initialValues={{ newEmail: '' }}
@@ -103,7 +105,7 @@ function AddUserModal({ show, onHide, eventId, isAdmin }) {
 
           await getPHP('addUserToEvent', {
             emailAddr: values.newEmail,
-            isAdmin,
+            isAdmin: isAdmin,
             eventId,
           })
           window.location.reload()
@@ -135,7 +137,7 @@ function AddUserModal({ show, onHide, eventId, isAdmin }) {
   )
 }
 
-function UserCard({ user, event, isOwner }) {
+function UserCard({ user, event, appUserIsOwner, isAdmin }) {
   const [userDetails, setUserDetails] = useState()
   const [showDetails, setShowDetails] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
@@ -162,7 +164,7 @@ function UserCard({ user, event, isOwner }) {
               >
                 Details
               </Button>
-              {isOwner && (
+              {(!isAdmin || appUserIsOwner) && (
                 <>
                   <Button
                     onClick={() => setShowEdit(true)}
@@ -175,7 +177,7 @@ function UserCard({ user, event, isOwner }) {
                     onClick={async () => {
                       if (
                         window.confirm(
-                          `Are you sure you want to delete admin ${user.emailAddr}?`
+                          `Are you sure you want to delete user ${user.emailAddr}?`
                         )
                       ) {
                         setDeleting(true)
@@ -211,13 +213,14 @@ function UserCard({ user, event, isOwner }) {
           user={user}
           userDetails={userDetails}
           event={event}
+          isAdmin={isAdmin}
         />
       </>
     )
   )
 }
 
-function EditUserModal({ show, onHide, user, userDetails, event }) {
+function EditUserModal({ show, onHide, user, userDetails, event, isAdmin }) {
   return (
     <Modal show={show} onHide={onHide} size="lg" backdrop="static">
       <Modal.Header closeButton>
@@ -264,7 +267,7 @@ function EditUserModal({ show, onHide, user, userDetails, event }) {
                 groupIds: groupChanged
                   ? JSON.stringify(values.groups.map(id => +id))
                   : null,
-                isAdmin: true,
+                isAdmin,
               },
               'json',
               'raw'
