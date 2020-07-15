@@ -51,7 +51,9 @@ export default function UsersPage({ isAdmin }) {
         isAdmin,
       })
 
-      const event = await getPHP('getEventGroups', { eventId: currentEventId })
+      const event = await getPHP('getEventWithGroups', {
+        eventId: currentEventId,
+      })
 
       setEvent({ ...event, usersOnPage })
 
@@ -238,7 +240,6 @@ function EditUserModal({ show, onHide, user, userDetails, event, isAdmin }) {
           }}
           onSubmit={async (values, { setSubmitting }) => {
             setSubmitting(true)
-
             let groupChanged =
               values.groups.length !== userDetails.groupIds.length
             if (!groupChanged) {
@@ -302,7 +303,6 @@ function EditUserModal({ show, onHide, user, userDetails, event, isAdmin }) {
                     ))}
                   </FormBS.Group>
                 )}
-                <pre>{JSON.stringify(values, null, 2)}</pre>
                 <Modal.Footer>
                   <Button variant="secondary" onClick={onHide}>
                     Cancel

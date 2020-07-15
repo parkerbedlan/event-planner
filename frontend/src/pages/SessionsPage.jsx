@@ -40,7 +40,7 @@ export default function SessionsPage() {
       const sessions = await getPHP('getEventSessions', {
         eventId: currentEventId,
       })
-      const eventRequest = await getPHP('getEventGroupsAndSize', {
+      const eventRequest = await getPHP('getEventGroupsWithSize', {
         eventId: +currentEventId,
       })
       setEvent({ ...eventRequest, sessions })

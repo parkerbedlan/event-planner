@@ -80,7 +80,7 @@ export default function NavigationBar() {
                   <Nav.Link href="/participants">
                     <h5>Participants</h5>
                   </Nav.Link>
-                  <Nav.Link disabled href="/groups">
+                  <Nav.Link href="/groups">
                     <h5>Groups</h5>
                   </Nav.Link>
                   <Nav.Link disabled href="/notifications">

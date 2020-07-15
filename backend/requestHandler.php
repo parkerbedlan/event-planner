@@ -497,7 +497,59 @@ function getEventSessionsDetails() {
   return $output;
 }
 
-function getEventGroupsAndSize() {
+function removeUserFromEvent() {
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $eventId = json_decode($_POST['eventId']);
+
+  $GLOBALS['db']->query("DELETE FROM Events_Users WHERE emailAddr='$emailAddr' AND eventId=$eventId");
+
+  return json_encode("deleted user from event");
+}
+
+function addUserToEvent() {
+  $db = $GLOBALS['db'];
+  $emailAddr = json_decode($_POST['emailAddr']);
+  $eventId= (int)json_decode($_POST['eventId']);
+  $isAdmin = (int)json_decode($_POST['isAdmin']);
+  
+  $userExists = (boolean)$db->query("SELECT 1 FROM Users WHERE emailAddr='$emailAddr'")->num_rows;
+  if(!$userExists) {
+    $db->query("INSERT INTO Users (emailAddr, isActivated) VALUES ('$emailAddr', 0)");
+  }
+
+  $userIsInEvent = $db->query("SELECT 1 FROM Events_Users WHERE emailAddr='$emailAddr' AND eventId=$eventId")->num_rows;
+  if(!$userIsInEvent) {
+    $db->query("INSERT INTO Events_Users VALUES ($eventId, '$emailAddr', $isAdmin, 0)");
+  }
+  else {
+    $db->query("UPDATE Events_Users SET isAdmin=$isAdmin, isOwner=0 WHERE emailAddr='$emailAddr' AND eventId=$eventId");
+  }
+
+  return json_encode("added user to event");
+}
+
+function getEventWithGroups() {
+  $db = $GLOBALS['db'];
+  $eventId = json_decode($_POST['eventId']);
+
+  $groups = [];
+  $result = $db->query("SELECT id, title FROM groups WHERE eventId=$eventId");
+  for ($i = 0; $i < $result->num_rows; $i++) {
+    $groupObj=$result->fetch_object();
+    $groupObj->id = (int)$groupObj->id;
+    array_push($groups, $groupObj);
+  }
+
+  $eventObj = new stdClass();
+  $eventObj->id = $eventId;
+  $eventObj->groups = $groups;
+
+  $output = json_encode($eventObj);
+  return $output;
+
+}
+
+function getEventGroupsWithSize() {
   $db = $GLOBALS['db'];
   $eventId = json_decode($_POST['eventId']);
 
@@ -535,14 +587,33 @@ function getEventGroups() {
     array_push($groups, $groupObj);
   }
 
-  $eventObj = new stdClass();
-  $eventObj->id = $eventId;
-  $eventObj->groups = $groups;
-
-  $output = json_encode($eventObj);
-
+  $output = json_encode($groups);
   return $output;
+}
 
+function getGroupEmails() {
+  $groupId = $_POST['groupId'];
+  $query = "SELECT emailAddr FROM Groups_Users WHERE groupId=$groupId";
+  $all_results = [];
+  $result = $GLOBALS['db']->query($query);
+  for ($i = 0; $i < $result->num_rows; $i ++) {
+    $emailAddr = $result->fetch_object()->emailAddr;
+    array_push($all_results, $emailAddr);
+  }
+  return json_encode($all_results);
+}
+
+function getEventUsers() {
+  $eventId = json_decode($_POST['eventId']);
+  $all_results = [];
+  $result = $GLOBALS['db']->query("SELECT users.emailAddr, users.firstName, users.lastName, events_users.isAdmin FROM events_users INNER JOIN users ON events_users.emailAddr=users.emailAddr WHERE events_users.eventId=$eventId;");
+  for ($i = 0; $i < $result->num_rows; $i++) {
+    $userObj = $result->fetch_object();
+    $userObj->isAdmin = (boolean)(int)$userObj->isAdmin;
+    array_push($all_results, $userObj);
+  }
+  $output = json_encode($all_results);
+  return $output;
 }
 
 function editUser() {
@@ -570,33 +641,40 @@ function editUser() {
   return json_encode("updated user");
 }
 
-function removeUserFromEvent() {
-  $emailAddr = json_decode($_POST['emailAddr']);
-  $eventId = json_decode($_POST['eventId']);
-
-  $GLOBALS['db']->query("DELETE FROM Events_Users WHERE emailAddr='$emailAddr' AND eventId=$eventId");
-
-  return json_encode("deleted user from event");
+function removeGroup() {
+  $groupId = json_decode($_POST['groupId']);
+  $GLOBALS['db']->query("DELETE FROM Groups WHERE id=$groupId");
+  return json_encode("removed group");
 }
 
-function addUserToEvent() {
+function addGroup() {
   $db = $GLOBALS['db'];
-  $emailAddr = json_decode($_POST['emailAddr']);
-  $eventId= (int)json_decode($_POST['eventId']);
-  $isAdmin = (int)json_decode($_POST['isAdmin']);
+  $eventId = json_decode($_POST['eventId']);
+  $title = json_decode($_POST['title']);
+  $users = json_decode($_POST['users']);
   
-  $userExists = (boolean)$db->query("SELECT 1 FROM Users WHERE emailAddr='$emailAddr'")->num_rows;
-  if(!$userExists) {
-    $db->query("INSERT INTO Users (emailAddr, isActivated) VALUES ('$emailAddr', 0)");
+  $db->query("INSERT INTO Groups (eventId, title) VALUES ($eventId, \"$title\")");
+  $groupId = $db->insert_id;
+  foreach ($users as $user) {
+    $db->query("INSERT INTO Groups_Users VALUES ($groupId, '$user->emailAddr', $user->isAdmin)");
   }
 
-  $userIsInEvent = $db->query("SELECT 1 FROM Events_Users WHERE emailAddr='$emailAddr' AND eventId=$eventId")->num_rows;
-  if(!$userIsInEvent) {
-    $db->query("INSERT INTO Events_Users VALUES ($eventId, '$emailAddr', $isAdmin, 0)");
-  }
-  else {
-    $db->query("UPDATE Events_Users SET isAdmin=$isAdmin, isOwner=0 WHERE emailAddr='$emailAddr' AND eventId=$eventId");
+  return json_encode('added group');
+}
+
+function editGroup() {
+  $db = $GLOBALS['db'];
+  $groupId = json_decode($_POST['groupId']);
+  $title = json_decode($_POST['title']);
+  $users = json_decode($_POST['users']);
+
+  $db->query("UPDATE Groups SET title=\"$title\" WHERE id=$groupId");
+
+  $db->query("DELETE FROM Groups_Users WHERE groupId=$groupId");
+  foreach ($users as $user) {
+    $query = "INSERT INTO Groups_Users VALUES ($groupId, '$user->emailAddr', $user->isAdmin)";
+    $db->query($query);
   }
 
-  return json_encode("added user to event");
+  return json_encode('edited group');
 }
