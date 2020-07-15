@@ -16,6 +16,7 @@ import { FieldWithError } from '../components/FieldWithError'
 import * as yup from 'yup'
 import { AppUser } from '../App'
 import { LoadingScreen } from '../components/LoadingScreen'
+import { SessionCard } from './SessionsPage'
 
 const cookies = new Cookies()
 
@@ -71,10 +72,23 @@ export default function EventsPage() {
       <CreateEventCard appUserEmail={appUser.emailAddr} />
       <hr />
       <h1>Participant Events</h1>
-      {Object.values(participantEvents).length ? (
-        participantEvents.map(event => (
-          <ParticipantEventCard key={event.id} event={event} />
-        ))
+      {participantEvents.length ? (
+        participantEvents.map((event, i) => {
+          return (
+            <ParticipantEventCard
+              key={event.id}
+              event={event}
+              setEvent={newEvent => {
+                setParticipantEvents(
+                  participantEvents
+                    .slice(0, i)
+                    .concat(newEvent)
+                    .concat(participantEvents.slice(i + 1))
+                )
+              }}
+            />
+          )
+        })
       ) : (
         <>
           <br />
@@ -85,12 +99,29 @@ export default function EventsPage() {
         adminEvents={appUser.adminEvents}
         participantEvents={participantEvents}
       />
+      <pre>{JSON.stringify(participantEvents, null, 2)}</pre>
     </Styles>
   )
 }
 
-function ParticipantEventCard({ event }) {
+function ParticipantEventCard({ event, setEvent }) {
   const [showModal, setShowModal] = useState(false)
+  useEffect(() => {
+    if (event.groups) return
+    async function f() {
+      const eventWithGroups = await getPHP('getEventGroupsWithSize', {
+        eventId: event.id,
+      })
+      console.log(eventWithGroups)
+      setEvent({
+        ...event,
+        groups: eventWithGroups.groups,
+        size: eventWithGroups.size,
+      })
+    }
+    f()
+    // eslint-disable-next-line
+  }, [event])
   return (
     <>
       <EventCard event={event} onClick={() => setShowModal(true)} />
@@ -109,12 +140,24 @@ function ParticipantEventModal({ event, show, onHide }) {
   } = useContext(AppUser)
   const [isLoading, setLoading] = useState(true)
   const [schedule, setSchedule] = useState()
+  const [sessionsGroupIds, setSessionsGroupIds] = useState(new Map())
   useEffect(() => {
     async function f() {
-      setSchedule(
-        await getPHP('getUserEventSessions', { emailAddr, eventId: event.id })
-      )
+      const schedule = await getPHP('getUserEventSessions', {
+        emailAddr,
+        eventId: event.id,
+      })
+      setSchedule(schedule)
       await setLoading(false)
+      const sessionsGroupIds = new Map(
+        await Promise.all(
+          schedule.map(async ({ id }) => [
+            id,
+            await getPHP('getSessionGroupIds', { sessionId: id }),
+          ])
+        )
+      )
+      setSessionsGroupIds(sessionsGroupIds)
     }
     f()
   }, [emailAddr, event.id])
@@ -131,9 +174,15 @@ function ParticipantEventModal({ event, show, onHide }) {
           <h2>{event.title}</h2>
           {schedule.map(session => {
             return (
-              <h3 key={session.id}>
-                {session.startTime} - {session.title}
-              </h3>
+              <SessionCard
+                session={{
+                  ...session,
+                  groupIds: sessionsGroupIds.get(session.id),
+                }}
+                event={event}
+                isAdmin={false}
+                key={session.id}
+              />
             )
           })}
         </div>

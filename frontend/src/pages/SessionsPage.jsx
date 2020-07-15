@@ -127,7 +127,7 @@ export default function SessionsPage() {
                 )}
                 {!!dateHeader && <h2 className="mt">{dateHeader}</h2>}
 
-                <SessionCard session={session} event={event} />
+                <SessionCard session={session} event={event} isAdmin={true} />
               </>
             )}
           </React.Fragment>
@@ -143,7 +143,7 @@ export default function SessionsPage() {
   )
 }
 
-function SessionCard({ session, event }) {
+export function SessionCard({ session, event, isAdmin }) {
   const [showDetails, setShowDetails] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -156,9 +156,13 @@ function SessionCard({ session, event }) {
             <div className="my-auto ml-4 mr-auto">
               <strong>{session.title}</strong>
               <br />
-              {session.startTime.substring(11, 16) +
-                ' - ' +
-                session.endTime.substring(11, 16)}
+              {isAdmin
+                ? session.startTime.substring(11, 16) +
+                  ' - ' +
+                  session.endTime.substring(11, 16)
+                : new Date(session.startTime).toLocaleString() +
+                  ' - ' +
+                  new Date(session.endTime).toLocaleTimeString()}
             </div>
             <div className="my-auto mr-4 ml-auto">
               <Button
@@ -168,62 +172,59 @@ function SessionCard({ session, event }) {
               >
                 Details
               </Button>
-              <Button
-                onClick={() => setShowEdit(true)}
-                variant="info"
-                className="m-2"
-              >
-                Edit
-              </Button>
-              <Button
-                onClick={async () => {
-                  if (
-                    window.confirm(
-                      `Are you sure you want to delete ${session.title}?`
-                    )
-                  ) {
-                    setDeleting(true)
-                    await getPHP('removeSession', {
-                      sessionId: session.id,
-                    })
-                    window.location.reload()
-                  }
-                }}
-                variant="danger"
-                className="m-2"
-              >
-                Delete
-              </Button>
+              {isAdmin && (
+                <>
+                  <Button
+                    onClick={() => setShowEdit(true)}
+                    variant="info"
+                    className="m-2"
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      if (
+                        window.confirm(
+                          `Are you sure you want to delete ${session.title}?`
+                        )
+                      ) {
+                        setDeleting(true)
+                        await getPHP('removeSession', {
+                          sessionId: session.id,
+                        })
+                        window.location.reload()
+                      }
+                    }}
+                    variant="danger"
+                    className="m-2"
+                  >
+                    Delete
+                  </Button>
+                </>
+              )}
             </div>
           </Row>
         </Card>
       )}
 
-      {showDetails && (
-        <DetailsSessionModal
-          show={showDetails}
-          session={session}
-          event={event}
-          onHide={() => setShowDetails(false)}
-        />
-      )}
+      <DetailsSessionModal
+        show={showDetails}
+        session={session}
+        event={event}
+        onHide={() => setShowDetails(false)}
+      />
 
-      {showEdit && (
-        <EditSessionModal
-          show={showEdit}
-          session={session}
-          event={event}
-          onHide={() => setShowEdit(false)}
-        />
-      )}
+      <EditSessionModal
+        show={showEdit}
+        session={session}
+        event={event}
+        onHide={() => setShowEdit(false)}
+      />
     </>
   )
 }
 
 function DetailsSessionModal({ show, onHide, session, event }) {
-  useEffect(() => {
-    console.log('details mount', session.id)
-  }, [session.id])
   return (
     <Modal show={show} onHide={onHide} size="lg">
       <Modal.Header closeButton>
@@ -263,7 +264,7 @@ function DetailsSessionModal({ show, onHide, session, event }) {
           <>
             <p>
               <strong>Attendees: </strong>
-              {session.everyone
+              {'' + session.everyone === '1'
                 ? 'Everyone'
                 : session.groupIds
                     .map(
@@ -274,7 +275,7 @@ function DetailsSessionModal({ show, onHide, session, event }) {
             </p>
             <p>
               <strong>Number of Attendees: </strong>
-              {session.everyone
+              {'' + session.everyone === '1'
                 ? event.size
                 : session.groupIds.reduce(
                     (a, b) => a + event.groups.find(({ id }) => id === b).size,
@@ -289,9 +290,6 @@ function DetailsSessionModal({ show, onHide, session, event }) {
 }
 
 function EditSessionModal({ show, onHide, session, event }) {
-  useEffect(() => {
-    console.log('edit mount', session.id)
-  }, [session.id])
   return (
     <Modal show={show} onHide={onHide} size="lg" backdrop="static">
       <Modal.Header closeButton>

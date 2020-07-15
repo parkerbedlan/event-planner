@@ -46,7 +46,7 @@ export default function UsersPage({ isAdmin }) {
         })
       )
 
-      const usersOnPage = await getPHP('getUsers', {
+      const usersOnPage = await getPHP('getEventUsersByType', {
         eventId: currentEventId,
         isAdmin,
       })

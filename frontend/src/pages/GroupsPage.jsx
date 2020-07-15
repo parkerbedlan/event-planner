@@ -41,7 +41,7 @@ export default function GroupsPage() {
       if (!currentEventId) window.location.href = '../'
       setEventId(currentEventId)
 
-      const usersReq = await getPHP('getEventUsers', {
+      const usersReq = await getPHP('getEventUsersAll', {
         eventId: currentEventId,
       })
       const groupsReq = await getPHP('getEventGroups', {
@@ -75,8 +75,6 @@ export default function GroupsPage() {
       {groups.map(group => (
         <GroupCard group={group} users={users} key={group.id} />
       ))}
-      <pre>{JSON.stringify(users, null, 2)}</pre>
-      <pre>{JSON.stringify(groups, null, 2)}</pre>
       <EditGroupModal
         newGroup
         eventId={eventId}
