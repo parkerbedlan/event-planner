@@ -1,31 +1,21 @@
 import React, { useState, useEffect, useRef, useContext } from 'react'
-import {
-  Toast,
-  Card,
-  Modal,
-  Button,
-  Form as FormBS,
-  ListGroup,
-  Spinner,
-} from 'react-bootstrap'
-import styled from 'styled-components'
+import Toast from 'react-bootstrap/Toast'
+import Card from 'react-bootstrap/Card'
+import Modal from 'react-bootstrap/Modal'
+import Button from 'react-bootstrap/Button'
+import FormBS from 'react-bootstrap/Form'
+import ListGroup from 'react-bootstrap/ListGroup'
+import Spinner from 'react-bootstrap/Spinner'
 import Cookies from 'universal-cookie'
 import { getPHP, sanitize, isEmail } from '../phpHelper'
 import { Formik, Form } from 'formik'
-import { FieldWithError } from '../components/FieldWithError'
+import FieldWithError from '../components/FieldWithError'
 import * as yup from 'yup'
 import { AppUser } from '../App'
-import { LoadingScreen } from '../components/LoadingScreen'
+import LoadingScreen from '../components/LoadingScreen'
 import { SessionCard } from './SessionsPage'
 
 const cookies = new Cookies()
-
-const Styles = styled.div`
-  .card {
-    float: left;
-    width: 15rem;
-  }
-`
 
 export default function EventsPage() {
   const { appUser } = useContext(AppUser)
@@ -45,7 +35,7 @@ export default function EventsPage() {
           emailAddr: appUser.emailAddr,
         })
       )
-      await setLoading(false)
+      setLoading(false)
     }
     f()
   }, [appUser.emailAddr])
@@ -53,7 +43,7 @@ export default function EventsPage() {
   return isLoading ? (
     <LoadingScreen />
   ) : (
-    <Styles>
+    <>
       <h1>Admin Events</h1>
       {!!appUser.adminEvents &&
         appUser.adminEvents.map(event => {
@@ -99,8 +89,7 @@ export default function EventsPage() {
         adminEvents={appUser.adminEvents}
         participantEvents={participantEvents}
       />
-      <pre>{JSON.stringify(participantEvents, null, 2)}</pre>
-    </Styles>
+    </>
   )
 }
 
@@ -112,7 +101,6 @@ function ParticipantEventCard({ event, setEvent }) {
       const eventWithGroups = await getPHP('getEventGroupsWithSize', {
         eventId: event.id,
       })
-      console.log(eventWithGroups)
       setEvent({
         ...event,
         groups: eventWithGroups.groups,
@@ -148,7 +136,7 @@ function ParticipantEventModal({ event, show, onHide }) {
         eventId: event.id,
       })
       setSchedule(schedule)
-      await setLoading(false)
+      setLoading(false)
       const sessionsGroupIds = new Map(
         await Promise.all(
           schedule.map(async ({ id }) => [
@@ -220,6 +208,7 @@ function EventCard({ event, onClick, isOwner }) {
             } else onClick()
           }}
           className="btn btn-outline-dark m-3"
+          style={{ float: 'left', width: '15rem' }}
         >
           <Card.Body>
             <Card.Title>{event.title}</Card.Title>
@@ -263,7 +252,6 @@ function RenameModal({ event, onHide }) {
         })}
         onSubmit={async (values, { setSubmitting }) => {
           setSubmitting(true)
-          console.log('submitted', values)
           await getPHP('renameEvent', {
             newTitle: sanitize(values.title),
             newShortTitle: sanitize(values.shortTitle),
@@ -332,7 +320,7 @@ function CreateEventCard({ appUserEmail }) {
     <>
       <Card
         onClick={() => setShow(true)}
-        style={{ float: 'none' }}
+        style={{ float: 'none', width: '15rem' }}
         className="btn btn-outline-secondary m-3"
       >
         <Card.Body>

@@ -40,7 +40,6 @@ export class Auth0Provider extends Component {
 
     if (user) {
       console.log('refresh')
-      // init({ ...user, signIn: false })
     }
 
     this.setState({ isAuthLoading: false, isAuthenticated, user })
@@ -50,7 +49,6 @@ export class Auth0Provider extends Component {
     this.setState({ isAuthLoading: true })
     await this.state.auth0Client.handleRedirectCallback()
     const user = await this.state.auth0Client.getUser()
-    // init({ ...user, signIn: true })
     signIn(user).then(res => console.log(res))
     this.setState({ user, isAuthenticated: true, isAuthLoading: false })
     window.history.replaceState({}, document.title, window.location.pathname)

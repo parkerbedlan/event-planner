@@ -1,29 +1,21 @@
 import React, { useState, useEffect, useContext } from 'react'
 import Cookies from 'universal-cookie'
-import styled from 'styled-components'
-import {
-  Card,
-  Row,
-  Button,
-  Modal,
-  Image,
-  Form as FormBS,
-  Spinner,
-} from 'react-bootstrap'
+import Card from 'react-bootstrap/Card'
+import Row from 'react-bootstrap/Row'
+import Button from 'react-bootstrap/Button'
+import Modal from 'react-bootstrap/Modal'
+import Image from 'react-bootstrap/Image'
+import FormBS from 'react-bootstrap/Form'
+import Spinner from 'react-bootstrap/Spinner'
 import { blobToUrl, getPHP, sanitize } from '../phpHelper'
-import { LoadingScreen } from '../components/LoadingScreen'
+import LoadingScreen from '../components/LoadingScreen'
 import { AppUser } from '../App'
 import { Formik, Form, Field } from 'formik'
-import { FieldWithError } from '../components/FieldWithError'
-import { ProfilePicField } from '../components/ProfilePicField'
+import FieldWithError from '../components/FieldWithError'
+import ProfilePicField from '../components/ProfilePicField'
+import * as yup from 'yup'
 
 const cookies = new Cookies()
-
-const Styles = styled.div`
-  .mt {
-    margin-top: 1em;
-  }
-`
 
 export default function UsersPage({ isAdmin }) {
   const {
@@ -57,7 +49,7 @@ export default function UsersPage({ isAdmin }) {
 
       setEvent({ ...event, usersOnPage })
 
-      await setLoading(false)
+      setLoading(false)
     }
     f()
   }, [emailAddr, isAdmin])
@@ -65,7 +57,7 @@ export default function UsersPage({ isAdmin }) {
   return isLoading ? (
     <LoadingScreen />
   ) : (
-    <Styles>
+    <>
       <h1 className="m-3 d-inline">{isAdmin ? 'Admin' : 'Participant'}s</h1>
       <Button
         onClick={() => setShowAdd(true)}
@@ -90,7 +82,7 @@ export default function UsersPage({ isAdmin }) {
         eventId={event.id}
         isAdmin={isAdmin}
       />
-    </Styles>
+    </>
   )
 }
 
@@ -102,6 +94,7 @@ function AddUserModal({ show, onHide, eventId, isAdmin }) {
       </Modal.Header>
       <Formik
         initialValues={{ newEmail: '' }}
+        validationSchema={yup.object({ newEmail: yup.string().required() })}
         onSubmit={async (values, { setSubmitting }) => {
           setSubmitting(true)
 
@@ -148,7 +141,7 @@ function UserCard({ user, event, appUserIsOwner, isAdmin }) {
   return (
     !isDeleting && (
       <>
-        <Card className="mt">
+        <Card className="mt-3">
           <Row>
             <div className="my-auto ml-4 mr-auto">
               <strong>{user.emailAddr}</strong>

@@ -1,18 +1,21 @@
-import React, { useContext, useState, useRef, useEffect } from 'react'
-import {
-  Nav,
-  Navbar,
-  Image,
-  NavDropdown,
-  Button,
-  Modal,
-  Form,
-  Spinner,
-} from 'react-bootstrap'
-import { blobToUrl, getPHP, sanitize, resizeImage } from '../phpHelper'
+import React, { useContext, useState, useEffect } from 'react'
+import Nav from 'react-bootstrap/Nav'
+import Navbar from 'react-bootstrap/Navbar'
+import Image from 'react-bootstrap/Image'
+import NavDropdown from 'react-bootstrap/NavDropdown'
+import Button from 'react-bootstrap/Button'
+import Modal from 'react-bootstrap/Modal'
+import FormBS from 'react-bootstrap/Form'
+import Spinner from 'react-bootstrap/Spinner'
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
+import Tooltip from 'react-bootstrap/Tooltip'
+import { blobToUrl, getPHP, sanitize } from '../phpHelper'
 import { Auth0Context } from '../contexts/auth0-context'
 import Cookies from 'universal-cookie'
 import { AppUser } from '../App'
+import { Formik, Form } from 'formik'
+import FieldWithError from '../components/FieldWithError'
+import ProfilePicField from '../components/ProfilePicField'
 
 const cookies = new Cookies()
 
@@ -35,7 +38,7 @@ export default function NavigationBar() {
           emailAddr: appUser.emailAddr,
         })
         setAppUser({ ...appUser, profilePic, adminEvents, firstName, lastName })
-        await setLoading(false)
+        setLoading(false)
       }
       f()
     }
@@ -83,9 +86,15 @@ export default function NavigationBar() {
                   <Nav.Link href="/groups">
                     <h5>Groups</h5>
                   </Nav.Link>
-                  <Nav.Link disabled href="/notifications">
-                    <h5>Notifications</h5>
-                  </Nav.Link>
+                  <OverlayTrigger
+                    placement="bottom-start"
+                    delay={{ show: 100, hide: 400 }}
+                    overlay={<Tooltip>Coming Soon!</Tooltip>}
+                  >
+                    <Nav.Link style={{ color: 'rgba(255, 255, 255, 0.25)' }}>
+                      <h5>Notifications</h5>
+                    </Nav.Link>
+                  </OverlayTrigger>
                   <ProfileDropdown appUser={appUser} />
                 </Nav>
               </Navbar.Collapse>
@@ -166,121 +175,77 @@ function ProfileDropdown({ appUser }) {
         </NavDropdown.Item>
       </NavDropdown>
 
-      <EditProfileModal show={show} setShow={setShow} appUser={appUser} />
+      <EditProfileModal
+        show={show}
+        onHide={() => setShow(false)}
+        appUser={appUser}
+      />
     </>
   )
 }
 
-function EditProfileModal({ show, setShow, appUser }) {
-  const firstNameField = useRef(null)
-  const [firstName, setFirstName] = useState(appUser.firstName)
-  const [lastName, setLastName] = useState(appUser.lastName)
-  const [profilePic, setProfilePic] = useState(appUser.profilePic)
-  const [picChanged, setPicChanged] = useState(false)
-  const [showSpinner, setShowSpinner] = useState(false)
-
-  useEffect(() => {
-    if (show && firstNameField) firstNameField.current.focus()
-  }, [show, firstNameField])
-
-  const clearAllFields = () => {
-    setFirstName(appUser.firstName)
-    setLastName(appUser.lastName)
-    setProfilePic(appUser.profilePic)
-    setShowSpinner(false)
-    setPicChanged(false)
-  }
-
+function EditProfileModal({ show, onHide, appUser }) {
   return (
-    <Modal
-      show={show}
-      onHide={() => setShow(false)}
-      backdrop="static"
-      size="lg"
-    >
+    <Modal show={show} onHide={onHide} size="lg" background="static">
       <Modal.Header closeButton>
-        <h4>Edit Profile</h4>
+        <h4>Edit profile: {appUser.emailAddr}</h4>
       </Modal.Header>
-      <Form className="m-3">
-        <Form.Group>
-          <Form.Label>First Name</Form.Label>
-          <Form.Control
-            ref={firstNameField}
-            maxsize="31"
-            value={firstName}
-            onChange={e => setFirstName(e.target.value)}
-          ></Form.Control>
-        </Form.Group>
-        <Form.Group>
-          <Form.Label>Last Name</Form.Label>
-          <Form.Control
-            maxsize="31"
-            value={lastName}
-            onChange={e => setLastName(e.target.value)}
-          ></Form.Control>
-        </Form.Group>
-        <Form.Group>
-          <Form.Label>Profile Picture</Form.Label>
-          <Form.Control
-            type="file"
-            onChange={async e => {
-              setPicChanged(true)
-              setProfilePic(
-                await resizeImage({ file: e.target.files[0], maxSize: 120 })
-              )
-            }}
-          ></Form.Control>
-          <br />
-          <Image
-            src={
-              !!profilePic
-                ? blobToUrl(profilePic)
-                : require('../images/profilePlaceholder.png')
-            }
-            width="100"
-            height="100"
-            alt="profile"
-            rounded
-          />
-        </Form.Group>
-      </Form>
-      <Modal.Footer>
-        <Button
-          onClick={() => {
-            clearAllFields()
-            setShow(false)
-          }}
-          variant="secondary"
-        >
-          Cancel
-        </Button>
-        <Button
-          onClick={async () => {
-            if (!showSpinner) {
-              setShowSpinner(true)
-              console.log(profilePic)
-              await getPHP(
-                'editUser',
-                {
-                  emailAddr: appUser.emailAddr,
-                  firstName: sanitize(firstName),
-                  lastName: sanitize(lastName),
-                  profilePicture: picChanged ? profilePic : null,
-                },
-                'json',
-                'raw'
-              )
-              window.location.reload()
-              setShow(false)
-              setShowSpinner(false)
-              setPicChanged(false)
-            }
-          }}
-        >
-          Save changes
-          {showSpinner && <Spinner animation="border" variant="light" />}
-        </Button>
-      </Modal.Footer>
+      <Formik
+        initialValues={{
+          firstName: appUser.firstName,
+          lastName: appUser.lastName,
+          profilePic: appUser.profilePic,
+        }}
+        onSubmit={async (values, { setSubmitting }) => {
+          setSubmitting(true)
+          await getPHP(
+            'editUser',
+            {
+              emailAddr: appUser.emailAddr,
+              firstName: sanitize(values.firstName),
+              lastName: sanitize(values.lastName),
+              profilePicture:
+                values.profilePic !== appUser.profilePic
+                  ? values.profilePic
+                  : null,
+            },
+            'json',
+            'raw'
+          )
+          window.location.reload()
+          setSubmitting(false)
+          onHide()
+        }}
+      >
+        {({ isSubmitting }) => {
+          return (
+            <Form className="m-3">
+              <FieldWithError name="firstName" placeholder="First Name" />
+              <FieldWithError name="lastName" placeholder="Last Name" />
+              <FormBS.Group>
+                <FormBS.Label>
+                  <strong>Profile Picture:</strong>
+                </FormBS.Label>
+                <ProfilePicField
+                  name="profilePic"
+                  placeholder={require('../images/profilePlaceholder.png')}
+                />
+              </FormBS.Group>
+              <Modal.Footer>
+                <Button variant="secondary" onClick={onHide}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  Save changes
+                  {isSubmitting && (
+                    <Spinner animation="border" variant="light" />
+                  )}
+                </Button>
+              </Modal.Footer>
+            </Form>
+          )
+        }}
+      </Formik>
     </Modal>
   )
 }

@@ -45,11 +45,6 @@ export async function getPHP(
   return output
 }
 
-export function blobRender(blob, documentQuery) {
-  const imageUrl = blobToUrl(blob)
-  document.querySelector(documentQuery).src = imageUrl
-}
-
 export function blobToUrl(blob) {
   const urlCreator = window.URL || window.webkitURL
   return urlCreator.createObjectURL(blob)

@@ -1,9 +1,10 @@
 import React from 'react'
 import { useField, useFormikContext } from 'formik'
 import { blobToUrl, resizeImage } from '../phpHelper'
-import { Form as FormBS, Image } from 'react-bootstrap'
+import Image from 'react-bootstrap/Image'
+import FormBS from 'react-bootstrap/Form'
 
-export const ProfilePicField = ({ placeholder, ...props }) => {
+const ProfilePicField = ({ placeholder, ...props }) => {
   const [{ value, onChange, ...field }] = useField(props)
   const { setFieldValue } = useFormikContext()
   return (
@@ -29,3 +30,5 @@ export const ProfilePicField = ({ placeholder, ...props }) => {
     </>
   )
 }
+
+export default ProfilePicField

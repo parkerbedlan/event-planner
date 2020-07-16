@@ -1,15 +1,9 @@
 import React from 'react'
-import styled from 'styled-components'
 
-const Styles = styled.div`
-  * {
-    margin-top: 1em;
-  }
-`
-//make it a <ol>
 export default function VerificationPage() {
   return (
-    <Styles>
+    <>
+      <br />
       <h1>Next steps:</h1>
       <h2>
         <ol>
@@ -21,6 +15,6 @@ export default function VerificationPage() {
       <h5>
         No hard feelings, we just want to make sure you are who you say you are.
       </h5>
-    </Styles>
+    </>
   )
 }

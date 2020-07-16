@@ -1,29 +1,20 @@
 import React, { useContext, useEffect, useState } from 'react'
-import styled from 'styled-components'
-import {
-  Button,
-  Card,
-  Row,
-  Modal,
-  Form as FormBS,
-  Spinner,
-  Alert,
-} from 'react-bootstrap'
+import Button from 'react-bootstrap/Button'
+import Card from 'react-bootstrap/Card'
+import Row from 'react-bootstrap/Row'
+import Modal from 'react-bootstrap/Modal'
+import FormBS from 'react-bootstrap/Form'
+import Spinner from 'react-bootstrap/Spinner'
+import Alert from 'react-bootstrap/Alert'
 import { AppUser } from '../App'
 import Cookies from 'universal-cookie'
-import { getPHP } from '../phpHelper'
-import { LoadingScreen } from '../components/LoadingScreen'
-import { FieldWithError } from '../components/FieldWithError'
+import { getPHP, sanitize } from '../phpHelper'
+import LoadingScreen from '../components/LoadingScreen'
+import FieldWithError from '../components/FieldWithError'
 import { Formik, Form, Field } from 'formik'
 import * as yup from 'yup'
 
 const cookies = new Cookies()
-
-const Styles = styled.div`
-  .mt {
-    margin-top: 1em;
-  }
-`
 
 export default function GroupsPage() {
   const {
@@ -63,7 +54,7 @@ export default function GroupsPage() {
   return isLoading ? (
     <LoadingScreen />
   ) : (
-    <Styles>
+    <>
       <h1 className="m-3 d-inline">Groups</h1>
       <Button
         onClick={() => setShowNew(true)}
@@ -82,7 +73,7 @@ export default function GroupsPage() {
         onHide={() => setShowNew(false)}
         users={users}
       />
-    </Styles>
+    </>
   )
 }
 
@@ -93,7 +84,7 @@ function GroupCard({ group, users }) {
   return (
     !deleting && (
       <>
-        <Card className="mt">
+        <Card className="mt-3">
           <Row>
             <div className="my-auto ml-4 mr-auto">
               <strong>{group.title}</strong>
@@ -171,7 +162,7 @@ function EditGroupModal({ group, users, show, onHide, newGroup, eventId }) {
           if (newGroup) {
             await getPHP('addGroup', {
               eventId,
-              title: values.title,
+              title: sanitize(values.title),
               users: values.emails.map(email => ({
                 emailAddr: email,
                 isAdmin: users.find(user => user.emailAddr === email).isAdmin

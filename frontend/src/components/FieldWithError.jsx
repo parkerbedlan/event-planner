@@ -1,8 +1,9 @@
 import React from 'react'
 import { useField } from 'formik'
-import { Alert, Form as FormBS } from 'react-bootstrap'
+import Alert from 'react-bootstrap/Alert'
+import FormBS from 'react-bootstrap/Form'
 
-export const FieldWithError = ({
+const FieldWithError = ({
   placeholder,
   style,
   className,
@@ -26,3 +27,5 @@ export const FieldWithError = ({
     </FormBS.Group>
   )
 }
+
+export default FieldWithError

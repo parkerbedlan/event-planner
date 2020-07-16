@@ -3,7 +3,7 @@ import { Auth0Context } from './contexts/auth0-context'
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
 
 import Layout from './components/Layout'
-import { LoadingScreen } from './components/LoadingScreen'
+import LoadingScreen from './components/LoadingScreen'
 import LoginPage from './pages/LoginPage'
 import VerificationPage from './pages/VerificationPage'
 import NoMatchPage from './pages/NoMatchPage'
@@ -16,7 +16,7 @@ import NavigationBar from './components/NavigationBar'
 
 export const AppUser = React.createContext()
 
-function App() {
+export default function App() {
   const { isAuthLoading, user } = useContext(Auth0Context)
   const [appUser, setAppUser] = useState({ emailAddr: null })
   useEffect(() => {
@@ -59,5 +59,3 @@ function App() {
     </AppUser.Provider>
   )
 }
-
-export default App

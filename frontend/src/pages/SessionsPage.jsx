@@ -1,28 +1,19 @@
 import React, { useState, useRef, useEffect, useContext } from 'react'
-import styled from 'styled-components'
-import {
-  Button,
-  Modal,
-  Spinner,
-  Form as FormBS,
-  Card,
-  Row,
-  Alert,
-} from 'react-bootstrap'
+import Button from 'react-bootstrap/Button'
+import Modal from 'react-bootstrap/Modal'
+import Spinner from 'react-bootstrap/Spinner'
+import FormBS from 'react-bootstrap/Form'
+import Card from 'react-bootstrap/Card'
+import Row from 'react-bootstrap/Row'
+import Alert from 'react-bootstrap/Alert'
 import { Formik, Field, Form } from 'formik'
 import Cookies from 'universal-cookie'
 import { getPHP, sanitize } from '../phpHelper'
-import { FieldWithError } from '../components/FieldWithError'
+import FieldWithError from '../components/FieldWithError'
 import { AppUser } from '../App'
-import { LoadingScreen } from '../components/LoadingScreen'
+import LoadingScreen from '../components/LoadingScreen'
 
 const cookies = new Cookies()
-
-const Styles = styled.div`
-  .mt {
-    margin-top: 1em;
-  }
-`
 
 export default function SessionsPage() {
   const {
@@ -44,7 +35,7 @@ export default function SessionsPage() {
         eventId: +currentEventId,
       })
       setEvent({ ...eventRequest, sessions })
-      await setLoading(false)
+      setLoading(false)
 
       const sessionsDetails = await getPHP('getEventSessionsDetails', {
         eventId: currentEventId,
@@ -82,7 +73,7 @@ export default function SessionsPage() {
   return isLoading ? (
     <LoadingScreen />
   ) : (
-    <Styles>
+    <>
       <h1 className="m-3 d-inline">Sessions</h1>
       <Button
         onClick={() => setShowNew(true)}
@@ -121,11 +112,11 @@ export default function SessionsPage() {
               <>
                 {!!monthHeader && (
                   <>
-                    <h1 className="mt">{monthHeader}</h1>
+                    <h1 className="mt-5">{monthHeader}</h1>
                     <hr />
                   </>
                 )}
-                {!!dateHeader && <h2 className="mt">{dateHeader}</h2>}
+                {!!dateHeader && <h2 className="mt-3">{dateHeader}</h2>}
 
                 <SessionCard session={session} event={event} isAdmin={true} />
               </>
@@ -133,13 +124,13 @@ export default function SessionsPage() {
           </React.Fragment>
         )
       })}
-      <NewSessionModal
+      <EditSessionModal
+        newSession
         show={showNew}
         onHide={() => setShowNew(false)}
         event={event}
-        appUserEmail={emailAddr}
       />
-    </Styles>
+    </>
   )
 }
 
@@ -151,7 +142,7 @@ export function SessionCard({ session, event, isAdmin }) {
   return (
     <>
       {!deleting && (
-        <Card className="mt">
+        <Card className="mt-3">
           <Row>
             <div className="my-auto ml-4 mr-auto">
               <strong>{session.title}</strong>
@@ -264,7 +255,7 @@ function DetailsSessionModal({ show, onHide, session, event }) {
           <>
             <p>
               <strong>Attendees: </strong>
-              {'' + session.everyone === '1'
+              {!!('' + session.everyone)
                 ? 'Everyone'
                 : session.groupIds
                     .map(
@@ -275,7 +266,7 @@ function DetailsSessionModal({ show, onHide, session, event }) {
             </p>
             <p>
               <strong>Number of Attendees: </strong>
-              {'' + session.everyone === '1'
+              {!!('' + session.everyone)
                 ? event.size
                 : session.groupIds.reduce(
                     (a, b) => a + event.groups.find(({ id }) => id === b).size,
@@ -289,29 +280,46 @@ function DetailsSessionModal({ show, onHide, session, event }) {
   )
 }
 
-function EditSessionModal({ show, onHide, session, event }) {
+function EditSessionModal({ show, onHide, session, event, newSession }) {
   return (
     <Modal show={show} onHide={onHide} size="lg" backdrop="static">
       <Modal.Header closeButton>
-        <h4>Edit: {session.title}</h4>
+        <h4>
+          {newSession ? 'Create New Session' : `Edit Session: ${session.title}`}
+        </h4>
       </Modal.Header>
-      {session.groupIds === undefined ? (
+      {session && session.groupIds === undefined ? (
         <LoadingScreen />
       ) : (
         <Formik
           validateOnChange={true}
-          initialValues={{
-            title: session.title,
-            description: session.description,
-            startDate: session.startTime.substring(0, 10),
-            startTime: session.startTime.substring(11, 16),
-            endDate: session.endTime.substring(0, 10),
-            endTime: session.endTime.substring(11, 16),
-            everyone: '' + session.everyone,
-            groups: session.groupIds.map(id => '' + id),
-            link: session.link,
-            location: session.location,
-          }}
+          initialValues={
+            newSession
+              ? {
+                  title: '',
+                  description: '',
+                  startDate: '',
+                  startTime: '08:00:00',
+                  endDate: '',
+                  endTime: '09:00:00',
+                  everyone: 'true',
+                  groups: [],
+                  link: '',
+                  location: '',
+                }
+              : {
+                  title: session.title,
+                  description: session.description,
+                  startDate: session.startTime.substring(0, 10),
+                  startTime: session.startTime.substring(11, 16),
+                  endDate: session.endTime.substring(0, 10),
+                  endTime: session.endTime.substring(11, 16),
+                  everyone: '' + session.everyone,
+                  groups: session.groupIds.map(id => '' + id),
+                  link: session.link,
+                  location: session.location,
+                }
+          }
           validate={values => {
             const errors = {}
 
@@ -337,19 +345,32 @@ function EditSessionModal({ show, onHide, session, event }) {
           }}
           onSubmit={async (values, { setSubmitting }) => {
             setSubmitting(true)
-            await getPHP('editSession', {
-              // eventId: event.id,
-              sessionId: session.id,
-              title: sanitize(values.title),
-              description: sanitize(values.description),
-              startTime: `${values.startDate} ${values.startTime}`,
-              endTime: `${values.endDate} ${values.endTime}`,
-              link: sanitize(values.link),
-              location: sanitize(values.location),
-              groups: values.groups.map(id => +id),
-              // eslint-disable-next-line
-              everyone: values.everyone == 'true',
-            })
+            if (newSession) {
+              await getPHP('addSession', {
+                eventId: event.id,
+                title: sanitize(values.title),
+                description: sanitize(values.description),
+                startTime: `${values.startDate} ${values.startTime}`,
+                endTime: `${values.endDate} ${values.endTime}`,
+                link: sanitize(values.link),
+                location: sanitize(values.location),
+                groups: values.groups.map(id => +id),
+                everyone: values.everyone === 'true',
+              })
+            } else {
+              await getPHP('editSession', {
+                sessionId: session.id,
+                title: sanitize(values.title),
+                description: sanitize(values.description),
+                startTime: `${values.startDate} ${values.startTime}`,
+                endTime: `${values.endDate} ${values.endTime}`,
+                link: sanitize(values.link),
+                location: sanitize(values.location),
+                groups: values.groups.map(id => +id),
+                everyone: values.everyone === 'true',
+              })
+            }
+
             window.location.reload()
             setSubmitting(false)
             onHide()
@@ -374,12 +395,21 @@ function EditSessionModal({ show, onHide, session, event }) {
                     type="date"
                     style={{ width: '15rem' }}
                     className="form-control d-inline"
+                    onChange={e => {
+                      setFieldValue('startDate', e.target.value)
+                      setFieldValue('endDate', e.target.value)
+                    }}
                   />
                   <Field
                     name="startTime"
                     type="time"
                     style={{ width: '15rem' }}
                     className="form-control d-inline"
+                    onChange={e => {
+                      setFieldValue('startTime', e.target.value)
+                      const [hr, min] = e.target.value.split(':')
+                      setFieldValue('endTime', ((+hr + 1) % 24) + ':' + min)
+                    }}
                   />
                 </FormBS.Group>
                 <FormBS.Group>
@@ -473,192 +503,6 @@ function EditSessionModal({ show, onHide, session, event }) {
           }}
         </Formik>
       )}
-    </Modal>
-  )
-}
-
-function NewSessionModal({ show, onHide, event, appUserEmail }) {
-  const titleField = useRef(null)
-  const [showSpinner, setShowSpinner] = useState(false)
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const [everyone, setEveryone] = useState(true)
-  const [groups, setGroups] = useState([])
-  const [link, setLink] = useState('')
-  const [location, setLocation] = useState('')
-
-  useEffect(() => {
-    if (titleField.current) titleField.current.focus()
-  }, [titleField])
-
-  return (
-    <Modal show={show} onHide={onHide} backdrop="static" size="lg">
-      <Modal.Header closeButton>
-        <h4>Create New Session</h4>
-      </Modal.Header>
-      <FormBS className="m-3">
-        <FormBS.Group>
-          <h2>What</h2>
-          <FormBS.Control
-            ref={titleField}
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            placeholder="Session Title"
-          />
-        </FormBS.Group>
-        <FormBS.Group>
-          <FormBS.Control
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            placeholder="Description (optional)"
-            as="textarea"
-          />
-        </FormBS.Group>
-        <FormBS.Group>
-          <h2>When</h2>
-          <FormBS.Label className="mr-2">Start Time</FormBS.Label>
-          <FormBS.Control
-            type="date"
-            value={startDate}
-            onChange={e => {
-              setStartDate(e.target.value)
-              setEndDate(e.target.value)
-            }}
-            style={{ display: 'inline', width: '15rem' }}
-          />
-          <FormBS.Control
-            type="time"
-            value={startTime}
-            onChange={e => {
-              setStartTime(e.target.value)
-              const [hr, min] = e.target.value.split(':')
-              setEndTime(((+hr + 1) % 24) + ':' + min)
-            }}
-            style={{ display: 'inline', width: '15rem' }}
-          />
-        </FormBS.Group>
-        <FormBS.Group>
-          <FormBS.Label className="mr-2">End Time</FormBS.Label>
-          <FormBS.Control
-            type="date"
-            value={endDate}
-            onChange={e => setEndDate(e.target.value)}
-            style={{ display: 'inline', width: '15rem' }}
-          />
-          <FormBS.Control
-            type="time"
-            value={endTime}
-            onChange={e => setEndTime(e.target.value)}
-            style={{ display: 'inline', width: '15rem' }}
-          />
-        </FormBS.Group>
-        {hasGroup(event) && (
-          <FormBS.Group>
-            <h2>Who</h2>
-            <FormBS.Check
-              checked={everyone}
-              onChange={() => setEveryone(true)}
-              name="everyoneRadio"
-              label={<strong>Everyone</strong>}
-              type="radio"
-            />
-            <FormBS.Check
-              checked={!everyone}
-              onChange={() => setEveryone(false)}
-              name="everyoneRadio"
-              label={<strong>Specific Groups...</strong>}
-              type="radio"
-            />
-            {!everyone && (
-              <>
-                <FormBS.Check
-                  onChange={e => {
-                    if (e.target.checked)
-                      setGroups(Object.keys(event.groups).map(id => +id))
-                    else setGroups([])
-                  }}
-                  label="Check All Groups"
-                  type="checkbox"
-                />
-                {Object.values(event.groups).map(group => (
-                  <FormBS.Check
-                    checked={groups.includes(group.id)}
-                    onChange={e => {
-                      if (e.target.checked) setGroups([...groups, group.id])
-                      else setGroups(groups.filter(g => g !== group.id))
-                    }}
-                    key={group.id}
-                    label={group.title}
-                    type="checkbox"
-                  />
-                ))}
-              </>
-            )}
-          </FormBS.Group>
-        )}
-        <FormBS.Group>
-          <h2>Where</h2>
-          <FormBS.Control
-            value={link}
-            onChange={e => setLink(e.target.value)}
-            type="url"
-            placeholder="Invite Link (optional)"
-          />
-        </FormBS.Group>
-        <FormBS.Group>
-          <FormBS.Control
-            value={location}
-            onChange={e => setLocation(e.target.value)}
-            placeholder="Physical Location (optional)"
-          />
-        </FormBS.Group>
-      </FormBS>
-      <Modal.Footer>
-        <Button onClick={onHide} variant="secondary">
-          Cancel
-        </Button>
-        <Button
-          onClick={async () => {
-            if (!title.trim().length) {
-              alert('Your session needs a title!')
-            } else if (!startDate || !startTime || !endDate || !endTime) {
-              alert('Your session needs a time!')
-            } else if (
-              new Date(`${startDate} ${startTime}`) -
-                new Date(`${endDate} ${endTime}`) >
-              0
-            ) {
-              alert(
-                "Your session's End Time needs to come after your Start Time!"
-              )
-            } else if (!everyone && !groups.length) {
-              alert('Check who you want to attend the event!')
-            } else if (!showSpinner) {
-              setShowSpinner(true)
-              await getPHP('addSession', {
-                eventId: event.id,
-                title: sanitize(title),
-                description: sanitize(description),
-                startTime: `${startDate} ${startTime}`,
-                endTime: `${endDate} ${endTime}`,
-                link: sanitize(link),
-                location: sanitize(location),
-                groups: groups,
-                everyone,
-              })
-              window.location.reload()
-              onHide()
-            }
-          }}
-        >
-          Create Session
-          {showSpinner && <Spinner animation="border" variant="light" />}
-        </Button>
-      </Modal.Footer>
     </Modal>
   )
 }
